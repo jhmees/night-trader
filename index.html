@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dark Echo — Macro Signal Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f7f4; color: #1a1a18; padding: 1.5rem; }
+  h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 1.5rem; }
+  .refresh-btn { font-size: 12px; padding: 4px 12px; border-radius: 8px; background: transparent; border: 1px solid #ccc; color: #666; cursor: pointer; margin-left: 12px; }
+  .refresh-btn:hover { background: #eee; }
+  .section-label { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin: 1.5rem 0 10px; }
+  .summary { background: #fff; border: 1px solid #e5e3dc; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .summary-item { text-align: center; }
+  .summary-item .label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .summary-item .value { font-size: 20px; font-weight: 500; }
+  .overall-badge { font-size: 14px; font-weight: 500; padding: 6px 18px; border-radius: 8px; display: inline-block; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .card { background: #fff; border: 1px solid #e5e3dc; border-radius: 12px; padding: 1rem 1.25rem; }
+  .card-title { font-size: 14px; font-weight: 500; margin-bottom: 12px; }
+  .signal-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0ede6; }
+  .signal-row:last-child { border-bottom: none; }
+  .signal-name { font-size: 14px; }
+  .signal-detail { font-size: 12px; color: #888; margin-top: 2px; }
+  .badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 8px; white-space: nowrap; }
+  .green { background: #eaf3de; color: #3b6d11; }
+  .red { background: #fcebeb; color: #a32d2d; }
+  .amber { background: #faeeda; color: #854f0b; }
+  .gray { background: #f1efe8; color: #5f5e5a; }
+  .bar-wrap { height: 5px; border-radius: 3px; background: #f0ede6; margin-top: 6px; width: 120px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+  .metric-card { background: #f1efe8; border-radius: 8px; padding: 1rem; }
+  .metric-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .metric-value { font-size: 20px; font-weight: 500; }
+  .metric-changes { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .loading { color: #888; font-size: 14px; }
+  .last-updated { font-size: 11px; color: #aaa; text-align: right; margin-top: 1rem; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1a18; color: #e8e6df; }
+    .card, .summary { background: #242420; border-color: #3a3a36; }
+    .signal-row { border-color: #2e2e2a; }
+    .metric-card { background: #2e2e2a; }
+    .bar-wrap { background: #2e2e2a; }
+    .green { background: #173404; color: #c0dd97; }
+    .red { background: #501313; color: #f7c1c1; }
+    .amber { background: #412402; color: #fac775; }
+    .gray { background: #2c2c2a; color: #b4b2a9; }
+    .refresh-btn { border-color: #444; color: #aaa; }
+    .refresh-btn:hover { background: #2e2e2a; }
+  }
+</style>
+</head>
+<body>
+<div style="display:flex;align-items:center;margin-bottom:4px">
+  <h1>Dark Echo — Macro Signal Dashboard</h1>
+  <button class="refresh-btn" onclick="loadAll()">↺ refresh</button>
+</div>
+<div class="subtitle">Faber 10-month MA + FRED macro indicators + crypto ripple monitor</div>
+<div id="summary" class="summary"><div class="loading">Loading signals...</div></div>
+<div class="section-label">Faber 10-month moving average signals</div>
+<div class="card">
+  <div id="faber-section"><div class="loading">Fetching ETF data...</div></div>
+</div>
+<div class="section-label">FRED macro indicators</div>
+<div class="grid2">
+  <div class="card" id="rates-card"><div class="loading">Loading...</div></div>
+  <div class="card" id="risk-card"><div class="loading">Loading...</div></div>
+</div>
+<div class="section-label">Crypto ripple monitor</div>
+<div class="grid3" id="crypto-section">
+  <div class="metric-card"><div class="loading">Loading...</div></div>
+</div>
+<div class="last-updated" id="last-updated"></div>
+
+<script>
+const FRED_KEY = '93167eb80daa8dd589ade40184a10cb9';
+const CORS = 'https://api.allorigins.win/raw?url=';
+
+async function fredSeries(id) {
+  try {
+    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${id}&api_key=${FRED_KEY}&file_type=json&sort_order=desc&limit=3`;
+    const r = await fetch(CORS + encodeURIComponent(url));
+    const d = await r.json();
+    const obs = d.observations.filter(o => o.value !== '.' && o.value !== 'ND');
+    return obs.length ? { current: parseFloat(obs[0].value), prev: obs.length > 1 ? parseFloat(obs[1].value) : null, date: obs[0].date } : null;
+  } catch(e) { return null; }
+}
+
+async function getETFMonthlyPrices(ticker) {
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1mo&range=14mo`;
+    const r = await fetch(CORS + encodeURIComponent(url));
+    const d = await r.json();
+    const closes = d.chart.result[0].indicators.quote[0].close.filter(v => v != null);
+    return closes;
+  } catch(e) { return null; }
+}
+
+function faberSignal(prices) {
+  if (!prices || prices.length < 10) return null;
+  const last10 = prices.slice(-10);
+  const ma10 = last10.reduce((a, b) => a + b, 0) / 10;
+  const current = prices[prices.length - 1];
+  const pct = ((current / ma10 - 1) * 100);
+  const ratio = Math.min(Math.max(((current / ma10) - 0.9) / 0.2 * 100, 0), 100);
+  return { current: current.toFixed(2), ma10: ma10.toFixed(2), above: current > ma10, pct: pct.toFixed(1), ratio };
+}
+
+const ASSETS = [
+  { ticker: 'GLD',  name: 'Gold',            desc: 'Inflation · geopolitical hedge' },
+  { ticker: 'TLT',  name: 'Long bonds',       desc: 'Rate expectations signal' },
+  { ticker: 'XLE',  name: 'Energy',           desc: 'Oil / supply cycle proxy' },
+  { ticker: 'EEM',  name: 'Emerging markets', desc: 'Dollar strength · risk appetite' },
+  { ticker: 'ITA',  name: 'Defense',          desc: 'Geopolitical escalation proxy' },
+];
+
+async function loadFaber() {
+  const results = await Promise.all(ASSETS.map(async a => {
+    const prices = await getETFMonthlyPrices(a.ticker);
+    const sig = faberSignal(prices);
+    return { ...a, sig };
+  }));
+
+  document.getElementById('faber-section').innerHTML = results.map(a => {
+    if (!a.sig) return `<div class="signal-row"><div><div class="signal-name">${a.name} <span style="font-size:12px;color:#aaa">${a.ticker}</span></div><div class="signal-detail">${a.desc}</div></div><span class="badge gray">data unavailable</span></div>`;
+    const cls = a.sig.above ? 'green' : 'red';
+    const label = a.sig.above ? `HOLD  +${a.sig.pct}%` : `→ CASH  ${a.sig.pct}%`;
+    const fillColor = a.sig.above ? '#639922' : '#e24b4a';
+    return `<div class="signal-row">
+      <div>
+        <div class="signal-name">${a.name} <span style="font-size:12px;color:#aaa">${a.ticker}</span></div>
+        <div class="signal-detail">${a.desc}</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${a.sig.ratio}%;background:${fillColor}"></div></div>
+      </div>
+      <div style="text-align:right;margin-left:1rem">
+        <span class="badge ${cls}">${label}</span>
+        <div style="font-size:11px;color:#aaa;margin-top:4px">$${a.sig.current} vs MA $${a.sig.ma10}</div>
+      </div>
+    </div>`;
+  }).join('');
+  return results;
+}
+
+aprommise.all async function loadFRED() {
+  const [t10, t2, fed, vix, hy] = await Promise.all([
+    fredSeries('DGS10'), fredSeries('DGS2'), fredSeries('FEDFUNDS'),
+    fredSeries('VIXCLS'), fredSeries('BAME�0AGHM2'),
+  ]);
+  const spread = (t10 && t2) ? (t10.current - t2.current) : null;
+  const sCls = spread === null ? 'gray' : spread < 0 ? 'red' : spread < 0.5 ? 'amber' : 'green';
+  const sLbl = spread === null ? 'n/a' : spread < 0 ? 'inverted ⚠' : spread < 0.5 ? 'flat — watch' : 'normal';
+  document.getElementById('rates-card').innerHTML = `
+    <div class="card-title">Interest rates</div>
+    <div class="signal-row"><div><div class="signal-name">Yield curve (2s10s)</div><div class="signal-detail">Primary recession predictor</div></div>
+    <div style="text-align:right"><span class="badge ${sCls}">${sLbl}</span><div style="font-size:11px;color:#aaa;margin-top:4px">${spread !== null ? spread.toFixed(2)+'%' : ''}</div></div></div>
+    <div class="signal-row"><div><div class="signal-name">10Y T</div></div><div style="font-size:18px;font-weight:500">${t10 ? t10.current.toFixed(2)+'%' : 'n/a'}</div></div>
+    <div class="signal-row"><div><div class="signal-name">2Y T</div></div><div style="font-size:18px;font-weight:500">${t2 ? t2.current.toFixed(2)+'%' : 'n/a'}</div></div>
+    <div class="signal-row"><div><div class="signal-name">Fed</div></div><div style="font-size:18px;font-weight:500">${fed ? fed.current.toFixed(2)+'%' : 'n/a'}</div></div>`;
+  const vixCls = !vix ? 'gray' : vix.current > 30 ? 'red' : vix.current > 20 ? 'amber' : 'green';
+  const vixLbl = !vix ? 'n/a' : vix.current > 30 ? 'high fear ⚠' : vix.current > 20 ? 'elevated' : 'calm';
+  const hyCls = !hy ? 'gray' : hy.current > 5 ? 'red' : hy.current > 3.5 ? 'amber' : 'green';
+  const hyLbl = !hy ? 'n/a' : hy.current > 5 ? 'wide — risk off' : hy.current > 3.5 ? 'widening' : 'tight — risk on';
+  document.getElementById('risk-card').innerHTML = `
+    <div class="card-title">Risk indicators</div>
+    <div class="signal-row"><div><div class="signal-name">VIX</div><div class="signal-detail">Market fear</div></div>
+    <div style="text-align:right"><span class="badge ${vixCls}">${vixLbl}</span><div style="font-size:11px;color:#aaa;margin-top:4px">${vix ? vix.current.toFixed(1) : ''}</div></div></div>
+    <div class="signal-row"><div><div class="signal-name">HY spread</div><div class="signal-detail">Credit stress</div></div>
+    <div style="text-align:right"><span class="badge ${hyCls}">${hyLbl}</span><div style="font-size:11px;color:#aaa;margin-top:4px">${hy ? hy.current.toFixed(2)+'%' : ''}</div></div></div>`;
+  return { spread, vix: vix?.current, hy: hy?.current };
+}
+
+async function loadCrypto() {
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true&include_7d_change=true');
+    const d = await r.json();
+    const coins = [{ id: 'bitcoin', name: 'Bitcoin', short: 'BTC' }, { id: 'ethereum', name: 'Ethereum', short: 'ETH' }];
+    document.getElementById('crypto-section').innerHTML = coins.map(c => {
+      const data = d[c.id];
+      if (!data) return '';
+      const c24 = data.usd_24h_change?.toFixed(1);
+      const c7 = data.usd_7d_change?.toFixed(1);
+      const cls24 = c24 < -8 ? 'red' : c24 < -3 ? 'amber' : c24 > 5 ? 'green' : 'gray';
+      return `<div class="metric-card"><div class="metric-label">${c.name}</div><div class="metric-value">$${data.usd.toLocaleString()}</div><div class="metric-changes"><span class="badge ${cls24}">${c24 > 0 ? '+' : ''}${c24}% 24h</span><span class="badge gray">${c7 > 0 ? '+' : ''}${c7}% 7d</span></div></div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('crypto-section').innerHTML = '<div style="font-size:12px;color:#aaa">CoinGecko rate limited</div>';
+  }
+}
+
+function buildSummary(faberResults, fredData) {
+  const valid = faberResults.filter(a => a.sig);
+  const holds = valid.filter(a => a.sig.above).length;
+  const total = valid.length;
+  const riskLvl = fredData.vix > 30 ? 'high' : fredData.vix > 20 ? 'elevated' : 'low';
+  const curveStatus = fredData.spread < 0 ? 'inverted' : fredData.spread < 0.5 ? 'flat' : 'normal';
+  const overall = holds >= 4 ? 'RISK-ON' : holds <= 1 ? 'RISK-OFF' : 'MIXED';
+  const oCls = holds >= 4 ? 'green' : holds <= 1 ? 'red' : 'amber';
+  document.getElementById('summary').innerHTML = `
+    <div class="summary-item"><div class="label">Overall signal</div><span class="overall-badge ${oCls}">${overall}</span></div>
+    <div class="summary-item"><div class="label">Assets above 10M MA</div><div class="value">${holds} / ${total}</div></div>
+    <div class="summary-item"><div class="label">Yield curve</div><div class="value" style="font-size:16px">${curveStatus}</div></div>
+    <div class="summary-item"><div class="label">Market fear (VIX)</div><div class="value" style="font-size:16px">${riskLvl}</div></div>
+    <div class="summary-item"><div class="label">Monthly check</div><div class="value" style="font-size:13px;color:#888">last day of month</div></div>`;
+}
+
+async function loadAll() {
+  document.getElementById('summary').innerHTML = '<div class="loading">Refreshing...</div>';
+  const [faberResults, fredData] = await Promise.all([loadFaber(), loadFRED(), loadCrypto()]);
+  if (faberResults && fredData) buildSummary(faberResults, fredData);
+  document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleString();
+}
+
+loadAll();
+</script>
+</body>
+</html>
