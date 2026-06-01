@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PHT × Gowan — Procurement Excellence as a System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --paper: #F4F1EA;
+    --paper-2: #ECE7DD;
+    --card: #FBFAF6;
+    --ink: #18140F;
+    --ink-2: #46403A;
+    --muted: #928B80;
+    --line: rgba(24,20,15,0.14);
+    --red: #8B0E04;
+    --red-bright: #A81406;
+    --amber: #FDB515;
+    --tan: #C9A36B;
+    --blue: #1A4485;
+    --dark: #15120E;
+    --dark-2: #221C16;
+
+    --disp: 'Space Grotesk', sans-serif;
+    --body: 'Hanken Grotesk', sans-serif;
+    --mono: 'Space Mono', monospace;
+
+    --t-cover: 100px;
+    --t-h1: 56px;
+    --t-h2: 38px;
+    --t-lead: 30px;
+    --t-body: 25px;
+    --t-small: 24px;
+    --t-mono: 24px;
+
+    --pad-x: 110px;
+    --pad-y: 78px;
+  }
+
+  html, body { height: 100%; background: #2a2620; }
+  body { font-family: var(--body); }
+  deck-stage:not(:defined) { visibility: hidden; }
+
+  .slide { width: 100%; height: 100%; position: relative; overflow: hidden; background: var(--paper); color: var(--ink); }
+  .slide.dark { background: var(--dark); color: var(--paper); }
+
+  .frame { position: absolute; inset: 0; padding: var(--pad-y) var(--pad-x); display: flex; flex-direction: column; z-index: 2; }
+
+  /* ── chrome ── */
+  .topbar { display: flex; align-items: flex-start; justify-content: space-between; }
+  .kick { font-family: var(--mono); font-size: var(--t-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--red); font-weight: 700; }
+  .slide.dark .kick { color: var(--amber); }
+
+  /* ── chapter tab bar (replaces per-slide kicker; built by animate.js) ── */
+  .chapnav { display: flex; gap: 36px; align-items: baseline; flex-wrap: nowrap; }
+  .chaptab { font-family: var(--mono); font-size: 18px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); display: inline-flex; align-items: baseline; gap: 9px; padding-bottom: 9px; border-bottom: 2px solid transparent; white-space: nowrap; cursor: pointer; transition: color .2s ease, border-color .2s ease; }
+  .chaptab i { font-style: normal; font-weight: 700; opacity: 0.5; }
+  .chaptab:hover { color: var(--ink-2); }
+  .chaptab.done { color: var(--ink-2); }
+  .chaptab.active { color: var(--red); border-bottom-color: var(--amber); }
+  .chaptab.active i { opacity: 1; color: var(--red); }
+  .slide.dark .chaptab { color: #847d72; }
+  .slide.dark .chaptab.done { color: #b3a89a; }
+  .slide.dark .chaptab:hover { color: #d4cdc1; }
+  .slide.dark .chaptab.active { color: var(--amber); border-bottom-color: var(--amber); }
+  .slide.dark .chaptab.active i { opacity: 1; color: var(--amber); }
+  .brandmark { display: flex; align-items: center; gap: 12px; }
+  .brandmark img { height: 80px; width: auto; }
+  .brandmark .wm { font-family: var(--disp); font-weight: 700; font-size: 26px; letter-spacing: 0.02em; color: var(--red); }
+
+  .head { margin-top: 26px; }
+  .h1 { font-family: var(--disp); font-weight: 600; font-size: var(--t-h1); line-height: 1.04; letter-spacing: -0.015em; max-width: 1500px; }
+  .h1 .r { color: var(--red); }
+  .h1 .a { color: var(--amber); -webkit-text-stroke: 0; }
+  .slide.dark .h1 .r { color: #e8643f; }
+  .dek { margin-top: 20px; font-size: var(--t-lead); line-height: 1.34; color: var(--ink-2); max-width: 1150px; font-weight: 400; }
+  .slide.dark .dek { color: #c9c2b6; }
+  .hairline { height: 1px; background: var(--line); margin: 22px 0 0; }
+  .slide.dark .hairline { background: rgba(255,255,255,0.14); }
+
+  .foot { margin-top: auto; padding-top: 22px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 19px; letter-spacing: 0.08em; color: var(--muted); }
+  .slide.dark .foot { border-top-color: rgba(255,255,255,0.14); color: #8d867b; }
+  .foot .tag { text-transform: uppercase; }
+
+  .body-area { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+
+  /* ── progress bar (fixed to viewport, outside scaled canvas) ── */
+  .deck-progress { position: fixed; top: 0; left: 0; height: 4px; width: 0; background: var(--amber); z-index: 99999; transition: width .55s cubic-bezier(.4,0,.2,1); }
+
+  /* ── card hover interactions ── */
+  .op, .wwa-card { transition: transform .26s cubic-bezier(.2,.7,.2,1), box-shadow .26s ease; }
+  .op:hover, .wwa-card:hover { transform: translateY(-6px); box-shadow: 0 18px 40px rgba(24,20,15,0.12); }
+  .matrix tbody tr { transition: background .2s ease; }
+  .matrix tbody tr:not(.pht):hover { background: rgba(24,20,15,0.035); }
+  .signal { transition: transform .2s ease; }
+  .signal:hover { transform: translateX(5px); }
+
+  /* ── exhibit label ── */
+  .exlabel { font-family: var(--mono); font-size: 18px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); display: flex; gap: 18px; align-items: baseline; }
+  .exlabel b { color: var(--ink); font-weight: 700; }
+  .src { font-family: var(--mono); font-size: 17px; color: var(--muted); letter-spacing: 0.02em; }
+
+  /* ════════ COVER ════════ */
+  .cv { padding: 86px 110px; }
+  .cv .reticle { position: absolute; right: -160px; top: 50%; transform: translateY(-50%); width: 760px; height: 760px; opacity: 0.5; }
+  .cv-top { display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 3; }
+  .cv-meta { font-family: var(--mono); font-size: 20px; letter-spacing: 0.12em; color: #9a9388; text-transform: uppercase; text-align: right; line-height: 1.7; }
+  .cv-center { margin-top: 130px; position: relative; z-index: 3; }
+  .cv-kick { font-family: var(--mono); font-size: 22px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--amber); font-weight: 700; }
+  .cv-h { font-family: var(--disp); font-weight: 600; font-size: var(--t-cover); line-height: 1.0; letter-spacing: -0.02em; color: var(--paper); margin-top: 30px; max-width: 1400px; }
+  .cv-h .r { color: #e8643f; }
+  .cv-h .a { color: var(--amber); }
+  .cv-dek { margin-top: 34px; font-size: 31px; line-height: 1.4; color: #c4bdb1; max-width: 1080px; }
+  .cv-foot { position: absolute; left: 110px; right: 110px; bottom: 78px; display: flex; align-items: flex-end; justify-content: space-between; z-index: 3; }
+  .cv-prep { display: flex; align-items: center; gap: 26px; }
+  .cv-prep .lbl { font-family: var(--mono); font-size: 19px; letter-spacing: 0.12em; text-transform: uppercase; color: #8d867b; }
+  .cv-rule { width: 1px; height: 56px; background: rgba(255,255,255,0.2); }
+  .cv-wm { font-family: var(--mono); font-size: 19px; letter-spacing: 0.1em; color: #8d867b; text-transform: uppercase; }
+  .gowan-chip { background: #fff; border-radius: 10px; padding: 13px 22px; display: flex; align-items: center; }
+  .gowan-chip img { height: 46px; width: auto; display: block; }
+
+  /* ════════ AGENDA ════════ */
+  .agenda { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 90px; margin-top: 8px; }
+  .ag-item { display: grid; grid-template-columns: 92px 1fr; gap: 26px; align-items: center; padding: 30px 0; border-bottom: 1px solid var(--line); }
+  .ag-num { font-family: var(--mono); font-size: 30px; font-weight: 700; color: var(--red); }
+  .ag-t { font-family: var(--disp); font-size: 32px; font-weight: 500; color: var(--ink); line-height: 1.1; }
+  .ag-s { font-size: 24px; color: var(--muted); margin-top: 6px; }
+
+  /* ════════ SECTION DIVIDER ════════ */
+  .div-wrap { position: absolute; inset: 0; padding: var(--pad-y) var(--pad-x); display: flex; flex-direction: column; justify-content: center; z-index: 2; }
+  .div-num { font-family: var(--disp); font-weight: 700; font-size: 280px; line-height: 0.8; color: transparent; -webkit-text-stroke: 2px rgba(253,181,21,0.6); letter-spacing: -0.02em; }
+  .div-ch { font-family: var(--mono); font-size: 24px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--amber); margin: 38px 0 14px; }
+  .div-t { font-family: var(--disp); font-weight: 600; font-size: 76px; line-height: 1.02; letter-spacing: -0.02em; color: var(--paper); max-width: 1200px; }
+  .div-reticle { position: absolute; right: 90px; top: 50%; transform: translateY(-50%); width: 520px; height: 520px; opacity: 0.55; }
+
+  /* ════════ STATS / industry reality ════════ */
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 64px; margin-top: 18px; }
+  .stat { border-top: 3px solid var(--red); padding-top: 24px; }
+  .stat.a2 { border-top-color: var(--amber); }
+  .stat.a3 { border-top-color: var(--blue); }
+  .stat-n { font-family: var(--disp); font-weight: 600; font-size: 96px; line-height: 0.9; letter-spacing: -0.03em; color: var(--ink); }
+  .stat-l { font-size: var(--t-body); line-height: 1.42; color: var(--ink-2); margin-top: 20px; max-width: 400px; }
+  .stat-src { margin-top: 16px; }
+  .h1.lead { font-size: 72px; line-height: 1.04; }
+
+  /* ── slide 02 trending hashtag ticker ── */
+  .head-pressure { display: flex; justify-content: space-between; align-items: center; gap: 70px; }
+  .head-pressure .h1 { flex: 0 1 auto; }
+  .trending { flex: none; display: flex; align-items: center; gap: 18px; transform: translate(64px, 70px); }
+  .trending-dot { width: 13px; height: 13px; border-radius: 50%; background: var(--red-bright); flex: none; box-shadow: 0 0 0 0 rgba(168,20,6,0.5); animation: trend-pulse 1.6s ease-out infinite; }
+  @keyframes trend-pulse { 0% { box-shadow: 0 0 0 0 rgba(168,20,6,0.5); } 70% { box-shadow: 0 0 0 12px rgba(168,20,6,0); } 100% { box-shadow: 0 0 0 0 rgba(168,20,6,0); } }
+  .trending-stage { position: relative; width: 470px; height: 58px; }
+  .trending-stage .tag { position: absolute; left: 0; top: 0; font-family: var(--disp); font-weight: 600; font-size: 46px; line-height: 58px; letter-spacing: -0.01em; color: var(--red); white-space: nowrap; opacity: 0; transition: opacity .42s ease; }
+  .trending-stage .tag.on { opacity: 1; }
+  .roadmap { margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 44px; }
+  .rm-label { font-family: var(--mono); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); flex: none; line-height: 1.5; }
+  .rm-items { display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px; flex: 1; }
+  .rm-item { display: flex; align-items: baseline; gap: 12px; padding-bottom: 8px; border-bottom: 2px solid transparent; }
+  .rm-item.active { border-bottom-color: var(--amber); }
+  .rm-n { font-family: var(--mono); font-weight: 700; font-size: 22px; color: var(--red); }
+  .rm-item.active .rm-n { color: #c98a08; }
+  .rm-t { font-family: var(--disp); font-weight: 500; font-size: 24px; color: var(--ink); }
+
+  /* ════════ VALUE AT STAKE ════════ */
+  .vstake { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 84px; align-items: center; }
+  .vs-big { font-family: var(--disp); font-weight: 600; font-size: 150px; line-height: 0.86; letter-spacing: -0.03em; color: var(--red); }
+  .vs-sub { font-size: var(--t-lead); line-height: 1.3; color: var(--ink); margin-top: 18px; font-weight: 500; max-width: 560px; }
+  .vs-note { font-size: 21px; color: var(--muted); margin-top: 18px; max-width: 540px; line-height: 1.5; }
+  .vs-bars { display: flex; flex-direction: column; gap: 26px; }
+  .vbar { }
+  .vbar-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .vbar-name { font-size: var(--t-small); color: var(--ink); font-weight: 500; }
+  .vbar-val { font-family: var(--mono); font-size: 22px; color: var(--ink-2); }
+  .vbar-track { height: 18px; background: var(--paper-2); border-radius: 9px; overflow: hidden; }
+  .vbar-fill { height: 100%; border-radius: 9px; }
+
+  /* ════════ THESIS (split) ════════ */
+  .thesis { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 12px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .th-col { padding: 46px 48px; }
+  .th-col.keep { background: var(--card); }
+  .th-col.give { background: var(--dark); color: var(--paper); }
+  .th-tag { font-family: var(--mono); font-size: 19px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .th-col.keep .th-tag { color: var(--red); }
+  .th-col.give .th-tag { color: var(--amber); }
+  .th-h { font-family: var(--disp); font-weight: 600; font-size: 34px; line-height: 1.08; margin-bottom: 26px; }
+  .th-li { display: flex; gap: 16px; align-items: flex-start; padding: 14px 0; font-size: var(--t-small); line-height: 1.35; border-top: 1px solid var(--line); }
+  .th-col.give .th-li { border-top-color: rgba(255,255,255,0.13); color: #d6cfc3; }
+  .th-li:first-of-type { border-top: none; }
+  .th-mark { flex: 0 0 auto; font-family: var(--mono); font-weight: 700; }
+  .th-col.keep .th-mark { color: var(--red); }
+  .th-col.give .th-mark { color: var(--amber); }
+
+  /* ════════ PARETO ════════ */
+  .pareto-wrap { margin-top: 6px; }
+  .pareto-legend { display: flex; gap: 34px; align-items: center; margin: 4px 0 8px; font-family: var(--mono); font-size: 18px; color: var(--ink-2); letter-spacing: 0.04em; }
+  .pareto-legend span { display: flex; align-items: center; gap: 9px; }
+  .pareto-legend i { width: 22px; height: 12px; border-radius: 2px; display: inline-block; }
+  .pareto-chart { position: relative; width: 100%; max-width: 1340px; }
+  .pareto-tip { position: absolute; top: -4px; transform: translateX(-50%); background: var(--ink); color: #fff; border-radius: 10px; padding: 12px 16px; font-family: var(--mono); font-size: 16px; line-height: 1.5; white-space: nowrap; opacity: 0; transition: opacity .12s; pointer-events: none; z-index: 5; box-shadow: 0 12px 30px rgba(0,0,0,0.25); }
+  .pareto-tip b { display: block; font-size: 17px; margin-bottom: 6px; }
+  .pareto-tip span { display: flex; align-items: center; gap: 8px; }
+  .pareto-tip i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .pareto-call { position: absolute; right: 0; top: 84px; width: 300px; text-align: right; }
+  .pareto-call .pc-n { font-family: var(--disp); font-weight: 600; font-size: 60px; color: var(--amber); line-height: 0.95; }
+  .pareto-call .pc-t { font-size: 21px; color: var(--ink-2); line-height: 1.4; margin-top: 10px; }
+
+  /* ════════ OPERATING MODEL ════════ */
+  .ops { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-top: 16px; }
+  .op { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 40px 36px; display: flex; flex-direction: column; }
+  .op-step { font-family: var(--mono); font-size: 18px; letter-spacing: 0.12em; color: var(--muted); }
+  .op-ico { width: 56px; height: 56px; margin: 22px 0 22px; }
+  .op-h { font-family: var(--disp); font-weight: 600; font-size: 30px; color: var(--red); margin-bottom: 14px; line-height: 1.1; }
+  .op-b { font-size: var(--t-small); color: var(--ink-2); line-height: 1.5; }
+  .op-tag { margin-top: 22px; font-family: var(--mono); font-size: 17px; color: var(--amber); letter-spacing: 0.04em; }
+
+  /* ════════ INTELLIGENCE ════════ */
+  .intel { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 80px; align-items: center; }
+  .intel-lead { font-family: var(--disp); font-weight: 600; font-size: 34px; line-height: 1.2; color: var(--ink); margin-bottom: 24px; }
+  .intel-lead .a { color: var(--red); }
+  .intel-text { font-size: var(--t-body); line-height: 1.55; color: var(--ink-2); max-width: 560px; }
+  .signals { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--card); }
+  .sig { display: grid; grid-template-columns: 188px 1fr; gap: 26px; padding: 26px 32px; border-top: 1px solid var(--line); align-items: center; }
+  .sig:first-child { border-top: none; }
+  .sig-l { font-family: var(--mono); font-size: 17px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; }
+  .sig.s1 .sig-l { color: var(--blue); }
+  .sig.s2 .sig-l { color: #c98a08; }
+  .sig.s3 .sig-l { color: var(--red); }
+  .sig-t { font-size: var(--t-small); color: var(--ink); line-height: 1.45; }
+
+  /* ════════ CASE ════════ */
+  .case { display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; margin-top: 20px; }
+  .ccard { border-top: 3px solid var(--line); padding-top: 22px; }
+  .ccard .cm { font-family: var(--mono); font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .ccard .cbefore { font-size: 22px; color: var(--muted); margin-top: 18px; text-decoration: line-through; text-decoration-color: rgba(146,139,128,0.6); }
+  .ccard .cafter { font-family: var(--disp); font-weight: 600; font-size: 58px; line-height: 0.95; color: var(--red); margin-top: 6px; letter-spacing: -0.02em; }
+  .ccard.amber .cafter { color: var(--ink); }
+  .ccard .cnote { font-size: 20px; color: var(--ink-2); margin-top: 14px; line-height: 1.4; }
+  .case-foot { margin-top: 40px; font-size: 22px; color: var(--muted); font-family: var(--mono); }
+
+  /* ════════ POSITIONING MATRIX ════════ */
+  .matrix { width: 100%; border-collapse: collapse; margin-top: 14px; }
+  .matrix th, .matrix td { text-align: left; padding: 20px 20px; border-bottom: 1px solid var(--line); }
+  .matrix thead th { font-family: var(--mono); font-size: 18px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 700; vertical-align: bottom; }
+  .matrix thead th.crit { text-align: center; width: 150px; }
+  .matrix tbody td.opt { font-family: var(--disp); font-size: 25px; font-weight: 500; color: var(--ink); }
+  .matrix tbody td.opt small { display: block; font-family: var(--body); font-size: 18px; color: var(--muted); font-weight: 400; margin-top: 3px; }
+  .matrix td.cell { text-align: center; font-size: 26px; }
+  .matrix tr.pht { background: var(--card); }
+  .matrix tr.pht td { border-bottom: none; }
+  .matrix tr.pht td.opt { color: var(--red); font-weight: 700; }
+  .dot-y { color: var(--red); font-weight: 700; }
+  .dot-n { color: #cbc4b8; }
+  .dot-p { color: var(--amber); font-weight: 700; }
+  .matrix-key { margin-top: 18px; font-family: var(--mono); font-size: 17px; color: var(--muted); display: flex; gap: 28px; }
+
+  /* ════════ THE ASK ════════ */
+  .ask { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 70px; align-items: start; margin-top: 10px; }
+  .ask-pilot { }
+  .ask-pilot .ap-h { font-family: var(--disp); font-weight: 600; font-size: 30px; color: var(--ink); margin-bottom: 6px; }
+  .ap-li { display: grid; grid-template-columns: 34px 1fr; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+  .ap-n { font-family: var(--mono); font-weight: 700; color: var(--red); font-size: 22px; }
+  .ap-t { font-size: var(--t-small); color: var(--ink-2); line-height: 1.4; }
+  .ap-t b { color: var(--ink); font-weight: 600; }
+  .ask-metrics { background: var(--dark); color: var(--paper); border-radius: 16px; padding: 40px 42px; }
+  .am-h { font-family: var(--mono); font-size: 18px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); margin-bottom: 22px; }
+  .am-row { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 0; border-top: 1px solid rgba(255,255,255,0.13); gap: 20px; }
+  .am-row:first-of-type { border-top: none; }
+  .am-k { font-size: 22px; color: #d6cfc3; }
+  .am-v { font-family: var(--disp); font-weight: 600; font-size: 34px; color: var(--paper); white-space: nowrap; flex: none; }
+  .am-v.amber { color: var(--amber); }
+  .ask-promise { margin-top: 30px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .promise { font-family: var(--mono); font-size: 18px; letter-spacing: 0.04em; color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 10px 20px; background: var(--card); }
+  .promise b { color: var(--red); }
+
+  /* ── cert strip ── */
+  .certs { display: flex; align-items: center; gap: 26px; flex-wrap: wrap; }
+  .certs .cl { font-family: var(--mono); font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .certs .cchip { height: 52px; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; }
+  .certs .cchip img { height: 100%; width: auto; max-width: 130px; object-fit: contain; }
+
+  /* close cta */
+  .close-cta { font-family: var(--disp); font-weight: 600; font-size: 46px; color: var(--red); line-height: 1.05; }
+
+  /* ════════ WHY NOW / WHY NOT SOFTWARE (dark verdict) ════════ */
+  .h1.sm { font-size: 42px; line-height: 1.08; }
+  .wn-cols { display: grid; grid-template-columns: 1fr 132px 1fr; margin-top: 6px; }
+  .wn-col { padding-top: 4px; }
+  .wn-colh { font-family: var(--mono); font-size: 19px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 14px; font-weight: 700; }
+  .wn-col.left .wn-colh { color: #b3a89a; }
+  .wn-col.right .wn-colh { color: var(--amber); }
+  .wn-row { padding: 15px 0; border-top: 1px solid rgba(255,255,255,0.12); }
+  .wn-row:first-of-type { border-top: none; }
+  .wn-badge { font-family: var(--mono); font-size: 17px; font-weight: 700; letter-spacing: 0.08em; color: #e8643f; margin-bottom: 7px; }
+  .wn-line { font-size: 24px; line-height: 1.36; color: #d4cdc1; }
+  .wn-col.right .wn-row { display: grid; grid-template-columns: 22px 1fr; gap: 16px; }
+  .wn-col.right .wn-mark { color: var(--amber); font-family: var(--mono); font-weight: 700; font-size: 22px; line-height: 1.3; }
+  .wn-col.right .wn-line { color: #efe7d9; }
+  .wn-divline { justify-self: center; width: 1px; background: rgba(255,255,255,0.18); position: relative; }
+  .wn-vs { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: var(--dark); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 9px 0; width: 104px; text-align: center; font-family: var(--mono); font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: #b3a89a; }
+  .wn-bridge { margin-top: 26px; border-top: 1px solid rgba(255,255,255,0.18); padding-top: 24px; display: grid; grid-template-columns: 56px 1fr; gap: 8px; align-items: start; }
+  .wn-q { font-family: var(--disp); font-weight: 700; font-size: 72px; line-height: 0.7; color: var(--amber); }
+  .wn-bt { font-family: var(--body); font-style: italic; font-size: 29px; line-height: 1.34; color: var(--paper); max-width: 1480px; }
+  .wn-bt b { color: var(--amber); font-style: normal; font-weight: 600; }
+
+  /* ════════ WHAT WE ACTUALLY ARE (light, 3-part) ════════ */
+  .wwa-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; margin-top: 12px; }
+  .wwa-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 36px 34px; display: flex; flex-direction: column; }
+  .wwa-ix { font-family: var(--mono); font-size: 18px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+  .wwa-ico { width: 50px; height: 50px; margin: 20px 0 22px; }
+  .wwa-h { font-family: var(--disp); font-weight: 600; font-size: 30px; margin-bottom: 14px; line-height: 1.08; }
+  .wwa-card.c1 .wwa-h { color: var(--red); }
+  .wwa-card.c2 .wwa-h { color: #c98a08; }
+  .wwa-card.c3 .wwa-h { color: var(--ink); }
+  .wwa-b { font-size: 24px; line-height: 1.46; color: var(--ink-2); }
+  .wwa-note { margin-top: 30px; background: var(--dark); color: var(--paper); border-radius: 14px; padding: 30px 42px; display: grid; grid-template-columns: 230px 1fr; gap: 36px; align-items: center; }
+  .wwa-note .nt { font-family: var(--mono); font-size: 18px; letter-spacing: 0.14em; color: var(--amber); text-transform: uppercase; line-height: 1.5; }
+  .wwa-note .nb { font-family: var(--disp); font-weight: 500; font-style: italic; font-size: 29px; line-height: 1.32; color: var(--paper); }
+  .wwa-note .nb b { color: var(--amber); font-style: normal; font-weight: 600; }
+</style>
+</head>
+<body>
+<deck-stage width="1920" height="1080">
+
+  <!-- ════════ 1 · COVER ════════ -->
+  <section data-label="Cover">
+    <div class="slide dark" data-screen-label="Cover">
+      <svg class="reticle" viewBox="0 0 200 200" fill="none" style="position:absolute;right:-160px;top:50%;transform:translateY(-50%);width:760px;height:760px;opacity:0.5">
+        <circle cx="100" cy="100" r="92" stroke="#FDB515" stroke-width="0.6" opacity="0.5"/>
+        <circle cx="100" cy="100" r="64" stroke="#FDB515" stroke-width="0.6" opacity="0.6"/>
+        <circle cx="100" cy="100" r="34" stroke="#e8643f" stroke-width="0.8"/>
+        <circle cx="100" cy="100" r="6" fill="#FDB515"/>
+        <line x1="100" y1="0" x2="100" y2="200" stroke="#FDB515" stroke-width="0.4" opacity="0.5"/>
+        <line x1="0" y1="100" x2="200" y2="100" stroke="#FDB515" stroke-width="0.4" opacity="0.5"/>
+      </svg>
+      <div class="cv">
+        <div class="cv-top">
+          <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT International" style="height:96px"></div>
+          <div class="cv-meta">Strategic Partnership Proposal<br>Charlotte, NC · Confidential · 2025</div>
+        </div>
+        <div class="cv-center">
+          <div class="cv-kick">Procurement Excellence as a System</div>
+          <h1 class="cv-h">Keep the must-win work.<br><span class="a">Hand us the rest.</span></h1>
+          <p class="cv-dek">A precision partner for off-strategy sourcing — so your team's scarce hours go to the decisions only they can make.</p>
+        </div>
+      </div>
+      <div class="cv-foot">
+        <div class="cv-prep">
+          <span class="lbl">Prepared for</span>
+          <div class="gowan-chip"><img src="assets/gowan-logo.png" alt="Gowan"></div>
+        </div>
+        <div class="cv-wm">PHT International Inc. &nbsp;·&nbsp; Discover. Develop. Deliver.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 2 · OPENER — problem + roadmap ════════ -->
+  <section data-label="The pressure">
+    <div class="slide" data-screen-label="The pressure">
+      <div class="frame">
+        <div class="topbar">
+          <div class="kick">01 — The Pressure</div>
+          <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT" style="width: 204px"></div>
+        </div>
+        <div class="head head-pressure">
+          <h2 class="h1 lead">Your mandate is growing fast.<br><span class="r">Your team isn't.</span></h2>
+          <div class="trending">
+            <span class="trending-dot"></span>
+            <span class="trending-stage">
+              <span class="tag on">#Tariffs</span>
+              <span class="tag">#IranWar</span>
+              <span class="tag">#PFASban</span>
+              <span class="tag">#ChinaPlus1</span>
+              <span class="tag">#RedSeaShipping</span>
+              <span class="tag">#AIshortage</span>
+              <span class="tag">#YellowPhosphorus</span>
+              <span class="tag">#ChinaExportCurbs</span>
+              <span class="tag">#ForceMajeure</span>
+            </span>
+          </div>
+        </div>
+        <div class="hairline"></div>
+        <div class="body-area">
+          <div class="stat-row">
+            <div class="stat">
+              <div class="stat-n">+50%</div>
+              <div class="stat-l">More spend managed per procurement FTE over the last five years.</div>
+              <div class="stat-src src">McKinsey Global Procurement Survey, 2025</div>
+            </div>
+            <div class="stat a2">
+              <div class="stat-n">55%</div>
+              <div class="stat-l">of CPOs report flat or shrinking budgets — while savings targets rose.</div>
+              <div class="stat-src src">McKinsey Global Procurement Survey, 2025</div>
+            </div>
+            <div class="stat a3">
+              <div class="stat-n">7.4%</div>
+              <div class="stat-l">productivity gap as workload outpaces capacity by double digits.</div>
+              <div class="stat-src src">The Hackett Group, 2023</div>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><span class="tag">Discover. Develop. Deliver.</span><span>02 / 15</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 5 · VALUE AT STAKE ════════ -->
+  <section data-label="Value at stake">
+    <div class="slide" data-screen-label="Value at stake">
+      <div class="frame">
+        <div class="topbar">
+          <div class="kick">01 — The Pressure</div>
+          <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT"></div>
+        </div>
+        <div class="head">
+          <h2 class="h1">Off-strategy work quietly eats your best hours.</h2>
+        </div>
+        <div class="hairline"></div>
+        <div class="body-area">
+          <div class="vstake">
+            <div>
+              <div class="exlabel"><b>Exhibit 1</b><span>Where senior buyer capacity goes</span></div>
+              <div class="vs-big">~60%</div>
+              <div class="vs-sub">of buyers' time is consumed by low-value transactional and tactical work.</div>
+              <div class="vs-note">Every hour a strategic buyer spends chasing a one-off supplier or clearing an off-strategy PO is an hour not spent on the negotiations and category bets that move the P&amp;L.</div>
+              <div class="src" style="margin-top:18px">Deloitte CPO Survey · Hackett Group benchmarks</div>
+            </div>
+            <div class="vs-bars">
+              <div class="vbar">
+                <div class="vbar-top"><span class="vbar-name">Transactional &amp; tactical execution</span><span class="vbar-val">~60%</span></div>
+                <div class="vbar-track"><div class="vbar-fill" style="width:60%;background:var(--tan)"></div></div>
+              </div>
+              <div class="vbar">
+                <div class="vbar-top"><span class="vbar-name">Compliance, admin &amp; supplier audits</span><span class="vbar-val">~22%</span></div>
+                <div class="vbar-track"><div class="vbar-fill" style="width:22%;background:var(--amber)"></div></div>
+              </div>
+              <div class="vbar">
+                <div class="vbar-top"><span class="vbar-name">Strategic &amp; must-win category work</span><span class="vbar-val">~18%</span></div>
+                <div class="vbar-track"><div class="vbar-fill" style="width:18%;background:var(--red)"></div></div>
+              </div>
+              <div class="vs-note" style="margin-top:6px">Less than one day a week reaches the work only your team can do.</div>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><span class="tag">Discover. Develop. Deliver.</span><span>03 / 15</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 6 · DIVIDER 02 ════════ -->
+  <section data-label="02 · The Thesis">
+    <div class="slide dark" data-screen-label="Divider — The Thesis">
+      <svg class="div-reticle" viewBox="0 0 200 200" fill="none">
+        <circle cx="100" cy="100" r="92" stroke="#FDB515" stroke-width="0.6" opacity="0.4"/>
+        <circle cx="100" cy="100" r="58" stroke="#FDB515" stroke-width="0.6" opacity="0.55"/>
+        <circle cx="100" cy="100" r="28" stroke="#e8643f" stroke-width="0.9"/>
+        <circle cx="100" cy="100" r="5" fill="#FDB515"/>
+        <line x1="100" y1="20" x2="100" y2="180" stroke="#FDB515" stroke-width="0.4" opacity="0.5"/>
+        <line x1="20" y1="100" x2="180" y2="100" stroke="#FDB515" stroke-width="0.4" opacity="0.5"/>
+      </svg>
+      <div class="div-wrap">
+        <div class="div-num">02</div>
+        <div class="div-ch">Chapter Two</div>
+        <h2 class="div-t">The thesis</h2>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 7 · THESIS ════════ -->
+  <section data-label="The thesis">
+    <div class="slide" data-screen-label="Thesis">
+      <div class="frame">
+        <div class="topbar">
+          <div class="kick">02 — The Thesis</div>
+          <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT"></div>
+        </div>
+        <div class="head">
+          <h2 class="h1">Procurement excellence is a <span class="r">system</span>,<br>not a headcount.</h2>
+          <p class="dek">Excellence isn't doing everything yourself. It's directing scarce attention to what wins — and routing the rest to an operator built for it.</p>
+        </div>
+        <div class="hairline"></div>
+        <div class="body-area">
+          <div class="thesis">
+            <div class="th-col keep">
+              <div class="th-tag">You own — the strategic core</div>
+              <div class="th-h">The decisions only you can make</div>
+              <div class="th-li"><span class="th-mark">→</span>Strategic supplier relationships &amp; partnerships</div>
+              <div class="th-li"><span class="th-mark">→</span>Big-ticket negotiations and category strategy</div>
+              <div class="th-li"><span class="th-mark">→</span>Demand forecasting &amp; cross-functional alignment</div>
+              <div class="th-li"><span class="th-mark">→</span>Risk appetite and supplier governance</div>
+            </div>
+            <div class="th-col give">
+              <div class="th-tag">We run — off-strategy sourcing</div>
+              <div class="th-h">The heavy lifting that drains the team</div>
+              <div class="th-li"><span class="th-mark">→</span>Off-strategy and emergency sourcing</div>
+              <div class="th-li"><span class="th-mark">→</span>Spot-buys, substitutions &amp; second sources</div>
+              <div class="th-li"><span class="th-mark">→</span>Off-strategy supplier admin, audits &amp; consolidation</div>
+              <div class="th-li"><span class="th-mark">→</span>Supply-risk monitoring &amp; early signals</div>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><span class="tag">Discover. Develop. Deliver.</span><span>05 / 15</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ WHY NOW / WHY NOT SOFTWARE ════════ -->
+  <section data-label="Why not software alone">
+    <div class="slide dark" data-screen-label="Why not software alone">
+      <div class="frame">
+        <div class="topbar">
+          <div class="kick">02 — The Thesis · The Consensus 2026</div>
+          <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT"></div>
+        </div>
+        <div class="head">
+          <h2 class="h1 sm">Every major firm agrees on the fix.<br><span class="r">Nobody has built it for chemicals.</span></h2>
+        </div>
+        <div class="hairline"></div>
+        <div class="body-area">
+          <div class="wn-cols">
+            <div class="wn-col left">
+              <div class="wn-colh">What the consultants prescribe</div>
+              <div class="wn-row">
+                <div class="wn-badge">McKinsey</div>
+                <div class="wn-line">Deploy autonomous operations for off-strategy spend; free your buyers for strategic work.</div>
+              </div>
+              <div class="wn-row">
+                <div class="wn-badge">The Hackett Group</div>
+                <div class="wn-line">Close the 9% efficiency gap through technology and external expertise.</div>
+              </div>
+              <div class="wn-row">
+                <div class="wn-badge">Gartner</div>
+                <div class="wn-line">Adopt off-strategy sourcing tools, supplier discovery and autonomous sourcing — now.</div>
+              </div>
+            </div>
+            <div class="wn-divline"><div class="wn-vs">vs.<br>reality</div></div>
+            <div class="wn-col right">
+              <div class="wn-colh">Where software stops</div>
+              <div class="wn-row"><span class="wn-mark">!</span><span class="wn-line">Chemical supply is relationship-driven and regional — no agent has the Rolodex, or the call that finds 5 tons in 48 hours.</span></div>
+              <div class="wn-row"><span class="wn-mark">!</span><span class="wn-line">REACH, GHS and dual-use rules turn automated sourcing without chemical expertise into compliance exposure, not efficiency.</span></div>
+              <div class="wn-row"><span class="wn-mark">!</span><span class="wn-line">Spot markets and force majeure need judgment — knowing when a supplier is bluffing or genuinely short.</span></div>
+            </div>
+          </div>
+          <div class="wn-bridge">
+            <div class="wn-q">&ldquo;</div>
+            <div class="wn-bt">The gap between what consulting firms prescribe and what procurement teams actually get is not a technology gap. It's an <b>expertise gap</b> — and PHT closes it.</div>
+          </div>
+        </div>
+        <div class="foot"><span class="tag">Discover. Develop. Deliver.</span><span>06 / 15</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 8 · PARETO (interactive) ════════ -->
+  <section data-label="Where workload hides">
+    <div class="slide" data-screen-label="Pareto exhibit">
+      <div class="frame">
+        <div class="topbar">
+          <div class="kick">02 — The Thesis</div>
+          <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT"></div>
+        </div>
+        <div class="head">
+          <h2 class="h1">Where the workload actually hides.</h2>
+        </div>
+        <div class="hairline"></div>
+        <div class="body-area">
+          <div class="pareto-wrap">
+            <div class="exlabel" style="margin-bottom:6px"><b>Exhibit 2</b><span>Supplier spend vs. transaction volume — hover any band</span></div>
+            <div class="pareto-legend">
+              <span><i style="background:var(--red)"></i>Top 20% — strategic spend</span>
+              <span><i style="background:var(--tan)"></i>Off-strategy suppliers — spend share</span>
+              <span><i style="background:var(--blue)"></i>Cumulative transaction volume</span>
+            </div>
+            <div class="pareto-chart"><div class="pareto-tip"></div>
+              <div class="pareto-call">
+                <div class="pc-n">20% / 70%</div>
+                <div class="pc-t">The bottom 80% of suppliers are a fifth of spend — but most of the transactions.</div>
+              </div>
+            </div>
+            <div class="src" style="margin-top:10px">Illustrative distribution based on typical mid-market direct &amp; indirect spend (Pareto/ABC analysis).</div>
+          </div>
+        </div>
+        <div class="foot"><span class="tag">Discover. Develop. Deliver.</span><span>07 / 15</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 9 · DIVIDER 03 ════════ -->
+  <section data-label="03 · The Operator">
+    <div class="slide dark" data-screen-label="Divider — The Operator">
+      <svg class="div-reticle" viewBox="0 0 200 200" fill="none">
+        <circle cx="100" cy="100" r="92" stroke="#FDB515" stroke-width="0.6" opacity="0.4"/>
+        <circle cx="100" cy="100" r="58" stroke="#FDB515" stroke-width="0.6" opacity="0.55"/>
+        <circle cx="100" cy="100" r="28" stroke="#e8643f" stroke-width="0.9"/>
+        <circle cx="100" cy="100" r="5" fill="#FDB515"/>
+        <line x1="100" y1="20" x2="100" y2="180" stroke="#FDB515" stroke-width="0.4" opacity="0.5"/>
+        <line x1="20" y1="100" x2="180" y2="100" stroke="#FDB515" stroke-width="0.4" opacity="0.5"/>
+      </svg>
+      <div class="div-wrap">
+        <div class="div-num">03</div>
+        <div class="div-ch">Chapter Three</div>
+        <h2 class="div-t">The operator</h2>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ WHAT WE ACTUALLY ARE ════════ -->
+  <section data-label="What we are">
+    <div class="slide" data-screen-label="What we actually are">
+      <div class="frame">
+        <div class="topbar">
+          <div class="kick">03 — The Operator · Our Model</div>
+          <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT"></div>
+        </div>
+        <div class="head">
+          <h2 class="h1"><span class="a">AI-augmented.</span> <span class="r">Human-led.</span> Chemistry-native.</h2>
+        </div>
+        <div class="hairline"></div>
+        <div class="body-area">
+          <div class="wwa-grid">
+            <div class="wwa-card c1">
+              <div class="wwa-ix">01 — The experts</div>
+              <svg class="wwa-ico" viewBox="0 0 48 48" fill="none"><circle cx="17" cy="17" r="7" stroke="#8B0E04" stroke-width="2"/><circle cx="33" cy="20" r="5.5" stroke="#8B0E04" stroke-width="2"/><path d="M6 40c0-7 5-11 11-11s11 4 11 11" stroke="#8B0E04" stroke-width="2"/><path d="M28 33c1.5-2 4-3 6-3 5 0 8 3 8 9" stroke="#8B0E04" stroke-width="2"/></svg>
+              <div class="wwa-h">We make the calls</div>
+              <div class="wwa-b">PhD chemists and industry veterans who know the molecules, the suppliers, and the market dynamics. We build the relationships and read the room.</div>
+            </div>
+            <div class="wwa-card c2">
+              <div class="wwa-ix">02 — The agents</div>
+              <svg class="wwa-ico" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="4" fill="#FDB515"/><circle cx="24" cy="24" r="12" stroke="#c98a08" stroke-width="2"/><circle cx="24" cy="24" r="20" stroke="#c98a08" stroke-width="2" stroke-dasharray="4 5"/></svg>
+              <div class="wwa-h">Speed without recklessness</div>
+              <div class="wwa-b">AI systems monitor your portfolio continuously, scan supply signals across our network, and surface the right information at the right moment.</div>
+            </div>
+            <div class="wwa-card c3">
+              <div class="wwa-ix">03 — The result</div>
+              <svg class="wwa-ico" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="20" stroke="#18140F" stroke-width="2"/><path d="M15 24.5l6.5 6.5L34 18" stroke="#FDB515" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="wwa-h">Software speed, human judgment</div>
+              <div class="wwa-b">The responsiveness of automation with the accountability of a team that has skin in the game — answerable for the outcome, not just the dashboard.</div>
+            </div>
+          </div>
+          <div class="wwa-note">
+            <div class="nt">// the honest version</div>
+            <div class="nb">This is not a platform. There is no login. There is no onboarding deck. <b>You call us, and we solve it.</b></div>
+          </div>
+        </div>
+        <div class="foot"><span class="tag">Discover. Develop. Deliver.</span><span>09 / 15</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 10 · OPERATING MODEL ════════ -->
+  <section data-label="Point. We execute.">
+    <div class="slide" data-screen-label="Operating model">
+      <div class="frame">
+        <div class="topbar">
+          <div class="kick">03 — The Operator</div>
+          <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT"></div>
+        </div>
+        <div class="head">
+          <h2 class="h1">Point. We execute.</h2>
+          <p class="dek">A single point of contact for off-strategy sourcing. You flag it; we run it end-to-end — and your existing relationships stay untouched.</p>
+        </div>
+        <div class="hairline"></div>
+        <div class="body-area">
+          <div class="ops">
+            <div class="op">
+              <div class="op-step">Move 01</div>
+              <svg class="op-ico" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="20" stroke="#8B0E04" stroke-width="2"/><circle cx="24" cy="24" r="11" stroke="#8B0E04" stroke-width="2"/><circle cx="24" cy="24" r="3" fill="#FDB515"/><line x1="24" y1="0" x2="24" y2="10" stroke="#8B0E04" stroke-width="2"/><line x1="24" y1="38" x2="24" y2="48" stroke="#8B0E04" stroke-width="2"/><line x1="0" y1="24" x2="10" y2="24" stroke="#8B0E04" stroke-width="2"/><line x1="38" y1="24" x2="48" y2="24" stroke="#8B0E04" stroke-width="2"/></svg>
+              <div class="op-h">Speed-dial sourcing</div>
+              <div class="op-b">When your network returns "unavailable," we activate alternative channels through deep Asian and global supply integration — fast.</div>
+              <div class="op-tag">→ Hours, not weeks</div>
+            </div>
+            <div class="op">
+              <div class="op-step">Move 02</div>
+              <svg class="op-ico" viewBox="0 0 48 48" fill="none"><path d="M8 40V20l16-12 16 12v20" stroke="#8B0E04" stroke-width="2" stroke-linejoin="round"/><rect x="18" y="26" width="12" height="14" stroke="#FDB515" stroke-width="2"/></svg>
+              <div class="op-h">Process intimacy</div>
+              <div class="op-b">We learn how decisions land inside your organisation, so solutions arrive ready to execute — not ready to explain.</div>
+              <div class="op-tag">→ Fits your workflow</div>
+            </div>
+            <div class="op">
+              <div class="op-step">Move 03</div>
+              <svg class="op-ico" viewBox="0 0 48 48" fill="none"><circle cx="14" cy="16" r="6" stroke="#8B0E04" stroke-width="2"/><circle cx="34" cy="16" r="6" stroke="#8B0E04" stroke-width="2"/><circle cx="24" cy="34" r="6" stroke="#FDB515" stroke-width="2"/><line x1="14" y1="22" x2="24" y2="28" stroke="#8B0E04" stroke-width="2"/><line x1="34" y1="22" x2="24" y2="28" stroke="#8B0E04" stroke-width="2"/></svg>
+              <div class="op-h">Supplier consolidation</div>
+              <div class="op-b">Every off-strategy supplier you hand us reduces your audit load to one point of contact. No records to chase, no long list to govern.</div>
+              <div class="op-tag">→ One vendor, not fifty</div>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><span class="tag">Discover. Develop. Deliver.</span><span>10 / 15</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 11 · INTELLIGENCE ════════ -->
+  <section data-label="Intelligence layer">
+    <div class="slide" data-screen-label="Intelligence layer">
+      <div class="frame">
+        <div class="topbar">
+          <div class="kick">03 — The Operator</div>
+          <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT"></div>
+        </div>
+        <div class="head">
+          <h2 class="h1">Know the shortage before you feel it.</h2>
+        </div>
+        <div class="hairline"></div>
+        <div class="body-area">
+          <div class="intel">
+            <div>
+              <div class="intel-lead">We monitor the chemical supply network <span class="a">continuously.</span></div>
+              <p class="intel-text">When precursor availability tightens, we flag downstream risk in your portfolio before it becomes an emergency. Not prediction — signal, with a recommended action and the window to take it.</p>
+            </div>
+            <div class="signals">
+              <div class="sig s1">
+                <div class="sig-l">Portfolio signal</div>
+                <div class="sig-t">Acetic anhydride allocation tightening across EU suppliers. Three of your downstream products exposed.</div>
+              </div>
+              <div class="sig s2">
+                <div class="sig-l">Action</div>
+                <div class="sig-t">Pre-buy a 4–6 week buffer on Product X. Decision window: next 10 days.</div>
+              </div>
+              <div class="sig s3">
+                <div class="sig-l">Outcome</div>
+                <div class="sig-t">Disruption avoided. Your team was never pulled in.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="foot"><span class="tag">Discover. Develop. Deliver.</span><span>11 / 15</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 12 · CASE ════════ -->
+  <section data-label="Measured impact">
+    <div class="slide" data-screen-label="Case — before/after">
+      <div class="frame">
+        <div class="topbar">
+          <div class="kick">03 — The Operator</div>
+          <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT"></div>
+        </div>
+        <div class="head">
+          <h2 class="h1">One quarter of off-strategy sourcing, measured.</h2>
+          <p class="dek">An illustrative engagement: a 90-day pilot routing off-strategy and emergency sourcing to PHT.</p>
+        </div>
+        <div class="hairline"></div>
+        <div class="body-area">
+          <div class="case">
+            <div class="ccard">
+              <div class="cm">Off-strategy suppliers managed</div>
+              <div class="cbefore">140 in-house</div>
+              <div class="cafter">1</div>
+              <div class="cnote">Single point of contact for off-strategy spend.</div>
+            </div>
+            <div class="ccard amber">
+              <div class="cm">Avg. time-to-source</div>
+              <div class="cbefore">3–4 weeks</div>
+              <div class="cafter">72h</div>
+              <div class="cnote">For flagged emergency and spot buys.</div>
+            </div>
+            <div class="ccard">
+              <div class="cm">Buyer hours freed / week</div>
+              <div class="cbefore">~6 hrs</div>
+              <div class="cafter">+11h</div>
+              <div class="cnote">Redirected to must-win categories.</div>
+            </div>
+            <div class="ccard amber">
+              <div class="cm">Disruptions pre-empted</div>
+              <div class="cbefore">reactive</div>
+              <div class="cafter">4</div>
+              <div class="cnote">Caught by signals before impact.</div>
+            </div>
+          </div>
+          <div class="case-foot">Figures illustrative of a typical off-strategy engagement — to be baselined against your data in the pilot.</div>
+        </div>
+        <div class="foot"><span class="tag">Discover. Develop. Deliver.</span><span>12 / 15</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 13 · DIVIDER 04 ════════ -->
+  <section data-label="04 · Why PHT">
+    <div class="slide dark" data-screen-label="Divider — Why PHT">
+      <svg class="div-reticle" viewBox="0 0 200 200" fill="none">
+        <circle cx="100" cy="100" r="92" stroke="#FDB515" stroke-width="0.6" opacity="0.4"/>
+        <circle cx="100" cy="100" r="58" stroke="#FDB515" stroke-width="0.6" opacity="0.55"/>
+        <circle cx="100" cy="100" r="28" stroke="#e8643f" stroke-width="0.9"/>
+        <circle cx="100" cy="100" r="5" fill="#FDB515"/>
+        <line x1="100" y1="20" x2="100" y2="180" stroke="#FDB515" stroke-width="0.4" opacity="0.5"/>
+        <line x1="20" y1="100" x2="180" y2="100" stroke="#FDB515" stroke-width="0.4" opacity="0.5"/>
+      </svg>
+      <div class="div-wrap">
+        <div class="div-num">04</div>
+        <div class="div-ch">Chapter Four</div>
+        <h2 class="div-t">Why PHT,<br>and the ask</h2>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 14 · POSITIONING ════════ -->
+  <section data-label="Positioning">
+    <div class="slide" data-screen-label="Positioning matrix">
+      <div class="frame">
+        <div class="topbar">
+          <div class="kick">04 — Why PHT</div>
+          <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT"></div>
+        </div>
+        <div class="head">
+          <h2 class="h1">Why not just use what you have?</h2>
+        </div>
+        <div class="hairline"></div>
+        <div class="body-area">
+          <table class="matrix">
+            <thead>
+              <tr>
+                <th>Approach</th>
+                <th class="crit">Frees<br>strategic time</th>
+                <th class="crit">Covers<br>off-strategy</th>
+                <th class="crit">Speed to<br>source</th>
+                <th class="crit">No added<br>markup</th>
+                <th class="crit">No<br>lock-in</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="opt">Hire in-house<small>More heads on the same problem</small></td>
+                <td class="cell dot-n">—</td><td class="cell dot-p">◑</td><td class="cell dot-p">◑</td><td class="cell dot-y">●</td><td class="cell dot-y">●</td>
+              </tr>
+              <tr>
+                <td class="opt">Group purchasing org<small>Aggregated catalog buying</small></td>
+                <td class="cell dot-p">◑</td><td class="cell dot-n">—</td><td class="cell dot-n">—</td><td class="cell dot-n">—</td><td class="cell dot-n">—</td>
+              </tr>
+              <tr>
+                <td class="opt">Distributor / broker<small>Margin on every line</small></td>
+                <td class="cell dot-p">◑</td><td class="cell dot-p">◑</td><td class="cell dot-y">●</td><td class="cell dot-n">—</td><td class="cell dot-n">—</td>
+              </tr>
+              <tr>
+                <td class="opt">Online marketplace<small>Self-serve, no service</small></td>
+                <td class="cell dot-n">—</td><td class="cell dot-p">◑</td><td class="cell dot-p">◑</td><td class="cell dot-y">●</td><td class="cell dot-y">●</td>
+              </tr>
+              <tr class="pht">
+                <td class="opt">PHT — precision operator<small>You point, we execute off-strategy</small></td>
+                <td class="cell dot-y">●</td><td class="cell dot-y">●</td><td class="cell dot-y">●</td><td class="cell dot-y">●</td><td class="cell dot-y">●</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="matrix-key"><span class="dot-y">● Strong</span><span class="dot-p">◑ Partial</span><span class="dot-n">— None</span></div>
+        </div>
+        <div class="foot"><span class="tag">Discover. Develop. Deliver.</span><span>14 / 15</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ 15 · THE ASK ════════ -->
+  <section data-label="The ask">
+    <div class="slide" data-screen-label="The ask">
+      <div class="frame">
+        <div class="topbar">
+          <div class="kick">04 — The Ask</div>
+          <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT"></div>
+        </div>
+        <div class="head">
+          <h2 class="h1">Start with one problem.</h2>
+          <p class="dek">A bounded, low-risk pilot. Prove the model on real off-strategy spend before anything scales.</p>
+        </div>
+        <div class="hairline"></div>
+        <div class="body-area">
+          <div class="ask">
+            <div class="ask-pilot">
+              <div class="ap-h">A 90-day pilot</div>
+              <div class="ap-li"><span class="ap-n">01</span><span class="ap-t"><b>Pick one category</b> — an off-strategy or emergency-prone spend area you'd rather not own.</span></div>
+              <div class="ap-li"><span class="ap-n">02</span><span class="ap-t"><b>Baseline together</b> — time-to-source, buyer hours, supplier count, incident rate.</span></div>
+              <div class="ap-li"><span class="ap-n">03</span><span class="ap-t"><b>We run it</b> — sourcing, execution and signals, against agreed SLAs.</span></div>
+              <div class="ap-li"><span class="ap-n">04</span><span class="ap-t"><b>Review &amp; decide</b> — measured against baseline. Expand, hold, or walk away.</span></div>
+              <div class="ask-promise">
+                <span class="promise"><b>No</b> lock-in</span>
+                <span class="promise"><b>No</b> middleman markup</span>
+                <span class="promise"><b>No</b> disruption to what works</span>
+              </div>
+            </div>
+            <div class="ask-metrics">
+              <div class="am-h">Success metrics</div>
+              <div class="am-row"><span class="am-k">Buyer hours returned / week</span><span class="am-v amber">+10h</span></div>
+              <div class="am-row"><span class="am-k">Emergency time-to-source</span><span class="am-v">&lt;72h</span></div>
+              <div class="am-row"><span class="am-k">Off-strategy suppliers consolidated</span><span class="am-v">1&nbsp;POC</span></div>
+              <div class="am-row"><span class="am-k">Commitment to begin</span><span class="am-v amber">90 days</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="foot">
+          <div class="certs">
+            <span class="cl">Trusted &amp; certified</span>
+            <span class="cchip"><img src="assets/cert-fda-gmp.png" alt="FDA / GMP"></span>
+            <span class="cchip"><img src="assets/cert-iso22000.png" alt="ISO 22000"></span>
+            <span class="cchip"><img src="assets/cert-ecovadis.jpg" alt="EcoVadis"></span>
+            <span class="cchip"><img src="assets/cert-dcat.png" alt="DCAT"></span>
+            <span class="cchip"><img src="assets/cert-socma.png" alt="SOCMA"></span>
+          </div>
+          <span>15 / 15</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</deck-stage>
+<script src="deck-stage.js"></script>
+<script src="pareto.js"></script>
+<script src="animate.js"></script>
+</body>
+</html>
