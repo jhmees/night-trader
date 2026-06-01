@@ -11,14 +11,16 @@
   function countUp(el) {
     if (!el.dataset.target) el.dataset.target = el.textContent.trim();
     var target = el.dataset.target;
-    // Special case: two-number callout like "20% / 70%"
-    var two = target.match(/^(\d+)(%?)\s*\/\s*(\d+)(%?)$/);
+    // Special case: two-number values like "20% / 70%" or a range like "80–90%".
+    // Both numbers climb together; the separator (slash or en/em-dash/hyphen) is kept.
+    var two = target.match(/^(\d+)(%?)\s*([\/–—-])\s*(\d+)(%?)$/);
     var dur = 1050;
     if (two) {
-      var a = +two[1], b = +two[3], s1 = two[2], s2 = two[4], t0 = performance.now();
+      var a = +two[1], s1 = two[2], sep = two[3], b = +two[4], s2 = two[5], t0 = performance.now();
+      var join = sep === '/' ? ' / ' : sep;
       var stepTwo = function (now) {
         var p = Math.min(1, (now - t0) / dur), e = easeOutCubic(p);
-        el.textContent = Math.round(a * e) + s1 + ' / ' + Math.round(b * e) + s2;
+        el.textContent = Math.round(a * e) + s1 + join + Math.round(b * e) + s2;
         if (p < 1) requestAnimationFrame(stepTwo); else el.textContent = target;
       };
       requestAnimationFrame(stepTwo);

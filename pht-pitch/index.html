@@ -200,14 +200,32 @@
   .pareto-legend { display: flex; gap: 34px; align-items: center; margin: 4px 0 8px; font-family: var(--mono); font-size: 18px; color: var(--ink-2); letter-spacing: 0.04em; }
   .pareto-legend span { display: flex; align-items: center; gap: 9px; }
   .pareto-legend i { width: 22px; height: 12px; border-radius: 2px; display: inline-block; }
-  .pareto-chart { position: relative; width: 100%; max-width: 1340px; }
-  .pareto-tip { position: absolute; top: -4px; transform: translateX(-50%); background: var(--ink); color: #fff; border-radius: 10px; padding: 12px 16px; font-family: var(--mono); font-size: 16px; line-height: 1.5; white-space: nowrap; opacity: 0; transition: opacity .12s; pointer-events: none; z-index: 5; box-shadow: 0 12px 30px rgba(0,0,0,0.25); }
-  .pareto-tip b { display: block; font-size: 17px; margin-bottom: 6px; }
-  .pareto-tip span { display: flex; align-items: center; gap: 8px; }
-  .pareto-tip i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
-  .pareto-call { position: absolute; right: 0; top: 84px; width: 300px; text-align: right; }
-  .pareto-call .pc-n { font-family: var(--disp); font-weight: 600; font-size: 60px; color: var(--amber); line-height: 0.95; }
-  .pareto-call .pc-t { font-size: 21px; color: var(--ink-2); line-height: 1.4; margin-top: 10px; }
+  .pareto-stage { display: grid; grid-template-columns: 1fr 350px; gap: 46px; align-items: center; margin-top: 2px; }
+  .pareto-chart { position: relative; width: 100%; max-width: 1120px; cursor: ew-resize; touch-action: none; }
+  /* draggable threshold handle — mono label, no flourish */
+  .pareto-thumb { position: absolute; top: 0; transform: translateX(-50%); font-family: var(--mono); font-size: 14px; font-weight: 700; letter-spacing: 0.06em; color: var(--ink); background: var(--amber); border-radius: 5px; padding: 4px 10px; white-space: nowrap; pointer-events: none; box-shadow: 0 4px 14px rgba(24,20,15,0.20); }
+  /* live keep / hand-off readout */
+  .pareto-split { display: flex; flex-direction: column; gap: 26px; }
+  .psplit { border-top: 3px solid var(--line); padding-top: 14px; }
+  .psplit.keep { border-top-color: var(--ink); }
+  .psplit.give { border-top-color: var(--red); }
+  .psplit .ph { font-family: var(--mono); font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .psplit .ph b { color: var(--ink); font-weight: 700; }
+  .psplit.give .ph b { color: var(--red); }
+  .psplit .pn { font-family: var(--disp); font-weight: 600; font-size: 56px; line-height: 0.92; letter-spacing: -0.02em; margin-top: 8px; }
+  .psplit.keep .pn { color: var(--ink); }
+  .psplit.give .pn { color: var(--red); }
+  .psplit .px { font-size: 19px; color: var(--ink-2); line-height: 1.4; margin-top: 9px; }
+  .psplit .px b { color: var(--ink); font-weight: 600; }
+  .pareto-hint { font-family: var(--mono); font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+  /* cited evidence strip */
+  .pareto-ev { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 16px; border-top: 1px solid var(--line); }
+  .pev { padding: 16px 30px 0 0; }
+  .pev + .pev { padding-left: 30px; border-left: 1px solid var(--line); }
+  .pev-n { font-family: var(--disp); font-weight: 600; font-size: 38px; color: var(--red); letter-spacing: -0.02em; line-height: 1; }
+  .pev.amber .pev-n { color: #c98a08; }
+  .pev-t { font-size: 18px; color: var(--ink-2); line-height: 1.32; margin-top: 8px; }
+  .pev-s { font-family: var(--mono); font-size: 13px; color: var(--muted); letter-spacing: 0.04em; margin-top: 8px; text-transform: uppercase; }
 
   /* ════════ OPERATING MODEL ════════ */
   .ops { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-top: 16px; }
@@ -387,19 +405,19 @@
         <div class="body-area">
           <div class="stat-row">
             <div class="stat">
-              <div class="stat-n">+50%</div>
-              <div class="stat-l">More spend managed per procurement FTE over the last five years.</div>
-              <div class="stat-src src">McKinsey Global Procurement Survey, 2025</div>
+              <div class="stat-n">80–90%</div>
+              <div class="stat-l">of every item you buy is low-value “tail” — the transaction volume your team wades through to keep production moving.</div>
+              <div class="stat-src src">McKinsey, “Long tail, big savings,” 2018</div>
             </div>
             <div class="stat a2">
-              <div class="stat-n">55%</div>
-              <div class="stat-l">of CPOs report flat or shrinking budgets — while savings targets rose.</div>
-              <div class="stat-src src">McKinsey Global Procurement Survey, 2025</div>
+              <div class="stat-n">20–40%</div>
+              <div class="stat-l">only of the data needed to source a tail item is centrally available — so every off-strategy buy starts from scratch.</div>
+              <div class="stat-src src">McKinsey, “Long tail, big savings,” 2018</div>
             </div>
             <div class="stat a3">
-              <div class="stat-n">7.4%</div>
-              <div class="stat-l">productivity gap as workload outpaces capacity by double digits.</div>
-              <div class="stat-src src">The Hackett Group, 2023</div>
+              <div class="stat-n">$1B+</div>
+              <div class="stat-l">combined tail spend at a large chemicals player — fragmented across thousands of materials and 1,000+ suppliers.</div>
+              <div class="stat-src src">Kearney, “Chemicals tail spend”</div>
             </div>
           </div>
         </div>
@@ -556,7 +574,7 @@
   </section>
 
   <!-- ════════ 8 · PARETO (interactive) ════════ -->
-  <section data-label="Where workload hides">
+  <section data-label="Where value hides">
     <div class="slide" data-screen-label="Pareto exhibit">
       <div class="frame">
         <div class="topbar">
@@ -564,24 +582,27 @@
           <div class="brandmark"><img src="assets/pht-logo.svg" alt="PHT"></div>
         </div>
         <div class="head">
-          <h2 class="h1">Where the workload actually hides.</h2>
+          <h2 class="h1">The tail isn't small. It's where the <span class="r">value</span> hides.</h2>
         </div>
         <div class="hairline"></div>
         <div class="body-area">
           <div class="pareto-wrap">
-            <div class="exlabel" style="margin-bottom:6px"><b>Exhibit 2</b><span>Supplier spend vs. transaction volume — hover any band</span></div>
+            <div class="exlabel" style="margin-bottom:8px"><b>Exhibit 2</b><span>Chemicals raw-materials spend vs. supplier complexity — drag the threshold</span></div>
             <div class="pareto-legend">
-              <span><i style="background:var(--red)"></i>Top 20% — strategic spend</span>
-              <span><i style="background:var(--tan)"></i>Off-strategy suppliers — spend share</span>
+              <span><i style="background:var(--red)"></i>Strategic A/B materials — spend you keep</span>
+              <span><i style="background:var(--tan)"></i>Tail (C materials) — spend share</span>
               <span><i style="background:var(--blue)"></i>Cumulative transaction volume</span>
             </div>
-            <div class="pareto-chart"><div class="pareto-tip"></div>
-              <div class="pareto-call">
-                <div class="pc-n">20% / 70%</div>
-                <div class="pc-t">The bottom 80% of suppliers are a fifth of spend — but most of the transactions.</div>
-              </div>
+            <div class="pareto-stage">
+              <div class="pareto-chart"></div>
+              <div class="pareto-split"></div>
             </div>
-            <div class="src" style="margin-top:10px">Illustrative distribution based on typical mid-market direct &amp; indirect spend (Pareto/ABC analysis).</div>
+            <div class="pareto-ev">
+              <div class="pev"><div class="pev-n">20% / 80%</div><div class="pev-t">of spend vs. of supplier complexity — the tail inverts the value-to-effort ratio.</div><div class="pev-s">Kearney · Chemicals tail spend</div></div>
+              <div class="pev amber"><div class="pev-n">7–12%</div><div class="pev-t">direct savings in the raw-materials tail once it's actively worked, not just watched.</div><div class="pev-s">Kearney · Chemicals tail spend</div></div>
+              <div class="pev"><div class="pev-n">up to 40%</div><div class="pev-t">fewer suppliers to govern after consolidation — fewer audits, one point of contact.</div><div class="pev-s">Kearney · Chemicals tail spend</div></div>
+            </div>
+            <div class="src" style="margin-top:14px">McKinsey, “Long tail, big savings: Digital unlocks hidden value in procurement” (2018) · Kearney, “Unlocking the hidden value of chemicals tail spend.” Curve illustrative; figures as published.</div>
           </div>
         </div>
         <div class="foot"><span class="tag">Discover. Develop. Deliver.</span><span>07 / 15</span></div>
