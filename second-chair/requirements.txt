@@ -1,0 +1,7 @@
+faster-whisper>=1.1
+anthropic>=0.40
+pyyaml>=6.0
+sounddevice>=0.5
+numpy>=1.26
+pynput>=1.7
+# Mac only, installed separately (see README): mlx-whisper

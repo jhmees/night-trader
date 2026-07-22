@@ -1,0 +1,38 @@
+# Second Chair configuration
+
+llm:
+  # anthropic | openai | ollama
+  provider: anthropic
+  model: claude-sonnet-5
+  # ollama fallback keeps transcripts local end-to-end:
+  # provider: ollama
+  # model: qwen3:32b
+  max_tokens: 400
+  # v1 tool set: web search only (Anthropic server-side tool; ignored by ollama)
+  web_search: true
+
+whisper:
+  # mlx (Mac GPU) | faster-whisper (CPU, any OS)
+  backend: faster-whisper
+  # mlx: mlx-community/whisper-large-v3-turbo ; faster-whisper: large-v3-turbo,
+  # distil-large-v3 (CPU-bound fallback), tiny (pipeline smoke tests)
+  model: large-v3-turbo
+  # null = auto-detect per segment (German/English mixed speech expected)
+  language: null
+
+audio:
+  system_device: "BlackHole 2ch"   # what the client says ("them")
+  mic_device: null                 # null = default input ("me")
+  sample_rate: 16000
+  # chunking: cut a segment after this much silence, or at max length
+  silence_sec: 0.8
+  max_chunk_sec: 15.0
+
+brief:
+  hotkey: "<alt>+<cmd>+b"
+  window_sec: 90        # transcript window sent to the LLM
+  buffer_sec: 300       # rolling buffer retention
+  deal_context: deal_context.md   # static context file, edited per call/client
+
+paths:
+  sessions_dir: sessions
