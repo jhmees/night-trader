@@ -1,0 +1,22 @@
+# Deterministic execution limits enforced by execution/guard.py (design §11.4).
+# The LLM proposes; guard.py disposes. Changing these requires a human commit.
+
+# Per-position cap, % of account equity.
+max_position_pct: 10.0
+
+# Sum of |trade notional| per day, % of equity. Guard clips to the remaining
+# budget and rejects when exhausted.
+max_daily_turnover_pct: 20.0
+
+# Sum of all position sizes, % of equity (no leverage: must stay <= 100).
+max_gross_exposure_pct: 100.0
+
+allow_short: false
+allow_margin: false
+
+# Live orders above this notional (USD) require the operator's --confirm flag.
+live_confirm_threshold_usd: 200.0
+
+# Circuit breaker: if realized P&L today is at or below -X%, guard rejects all
+# new BUY orders for the rest of the day (sells to reduce risk still pass).
+daily_loss_halt_pct: 3.0

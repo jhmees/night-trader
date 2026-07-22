@@ -82,10 +82,18 @@ h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
 <div class="last-updated" id="last-updated"></div>
 
 <script>
-var FRED_KEY = '93167eb80daa8dd589ade40184a10cb9';
+// The FRED key is stored in your browser's localStorage, never in this file
+// (a key committed here is public — if one ever was, rotate it at
+// https://fred.stlouisfed.org/docs/api/api_key.html).
+var FRED_KEY = localStorage.getItem('FRED_KEY') || '';
+if (!FRED_KEY) {
+  FRED_KEY = (prompt('Enter your FRED API key (free at fred.stlouisfed.org; stored only in this browser)') || '').trim();
+  if (FRED_KEY) localStorage.setItem('FRED_KEY', FRED_KEY);
+}
 var CORS = 'https://api.allorigins.win/raw?url=';
 
 function fredFetch(id) {
+  if (!FRED_KEY) return Promise.resolve(null);
   var url = 'https://api.stlouisfed.org/fred/series/observations?series_id=' + id + '&api_key=' + FRED_KEY + '&file_type=json&sort_order=desc&limit=3';
   return fetch(CORS + encodeURIComponent(url))
     .then(function(r) { return r.json(); })

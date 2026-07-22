@@ -1,0 +1,22 @@
+# Which LLM runs each graph node (RT-8: tiered models, never hardcoded).
+# Cheap/fast model for extraction-shaped work; frontier model only where
+# multi-step reasoning pays for itself (debate, synthesis, risk).
+default: claude-haiku-4-5-20251001
+nodes:
+  extraction_firewall: claude-haiku-4-5-20251001   # raw text -> TypedEvent
+  analyst_fundamentals: claude-haiku-4-5-20251001
+  analyst_technical: claude-haiku-4-5-20251001
+  analyst_sentiment: claude-haiku-4-5-20251001
+  analyst_news: claude-haiku-4-5-20251001
+  analyst_institutional_lag: claude-haiku-4-5-20251001
+  analyst_cat_weather: claude-haiku-4-5-20251001
+  bull_researcher: claude-sonnet-5
+  bear_researcher: claude-sonnet-5
+  devils_advocate: claude-sonnet-5                 # RT-2 guardrail (b)
+  research_manager: claude-sonnet-5
+  risk_manager: claude-sonnet-5
+  portfolio_manager: claude-sonnet-5
+
+# Hard ceiling on token spend per full-graph run, USD (RT-8 mitigation c;
+# Phase 2 gate). The run aborts synthesis and logs if projected to exceed.
+max_tokens_usd_per_run: 2.50

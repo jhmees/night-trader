@@ -1,0 +1,23 @@
+# THE ticker whitelist — this is an execution hard limit enforced by
+# execution/guard.py (RT-5). An LLM cannot add a ticker here; only a human
+# commit can. Buckets and priorities per design §2.
+buckets:
+  - id: 1
+    name: rate-sensitive-etfs
+    risk: moderate
+    tickers: [XLF, XLU, XLRE, SPY, QQQ]
+  - id: 2
+    name: insurance-linked
+    risk: moderate-high
+    # ILS is thin (~$25M AUM, wide spreads — RT-3): trade only via the seasonal
+    # spread-cycle logic, never landfall prediction. KRC is UCITS/London-listed
+    # and NOT on Alpaca (RT-6) — requires IBKR before it can be listed here.
+    tickers: [ILS]
+  - id: 3
+    name: diversifiers
+    risk: small-allocation
+    tickers: [GLD, IBIT, ETHA]
+  - id: 4
+    name: aggressive-growth
+    risk: high
+    tickers: []  # deferred post-v1 (design §2)

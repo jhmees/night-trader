@@ -1,0 +1,48 @@
+[project]
+name = "nighttrader"
+version = "0.1.0"
+description = "Nighttrader — scenario-driven macro research & decision-support pipeline (see NIGHTTRADER_DESIGN.md)"
+readme = "README.md"
+# Target runtime is Python 3.12 (Mac mini, per design §11.1); 3.11 floor keeps CI portable.
+requires-python = ">=3.11"
+dependencies = [
+    # Phase 0/1 core only. Heavier layers are opt-in extras so a fresh clone
+    # doesn't pull torch/langgraph before the phase that needs them (RT-8 cost
+    # discipline applies to install weight too).
+    "pydantic>=2.7",
+    "pandas>=2.2",
+    "pyarrow>=16.0",
+    "duckdb>=1.0",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+    "pyyaml>=6.0",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+# Phase 1 — Technical analyst baseline (Kronos, local inference; MPS on Apple Silicon)
+kronos = ["torch>=2.3", "huggingface_hub>=0.23"]
+# Phase 1+ — broker connectivity (paper first; live gated by guard + human confirm)
+broker = ["alpaca-py>=0.21"]
+# Phase 2 — agent graph. NOTE: pin exact `tradingagents` version here when Phase 2
+# starts (RT-9: dependency, NOT a vendored fork). Do not add it unpinned.
+agents = ["langgraph>=0.2", "langchain-anthropic>=0.2"]
+dev = ["pytest>=8.0", "ruff>=0.5"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nighttrader"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
