@@ -4,11 +4,13 @@ enforced at broker construction — a live client cannot even be built without
 both keys.
 
 Submission requires a GuardVerdict that (a) passed/clipped, (b) is bound to
-the exact Decision being submitted (decision_id/ticker/action), and (c) was
+the exact Decision being submitted (decision_id/ticker/action), (c) was
 evaluated under the execution context this broker runs in (a live broker
-refuses verdicts judged with live=False). A verdict earned by one decision can
-never authorize another, and a paper-context verdict can never gate real
-money (RT-5 hard boundary).
+refuses verdicts judged with live=False), and (d) shares the equity basis the
+submission claims — orders are sized from the verdict's own notional, so the
+dollar amount the human-confirm gate saw is the dollar amount that trades.
+A verdict earned by one decision can never authorize another, and a
+paper-context verdict can never gate real money (RT-5 hard boundary).
 
 Alpaca connectivity (``alpaca-py``, install extra ``broker``) is wrapped so
 Phase 0/1 code and tests run without the SDK installed.
@@ -52,12 +54,12 @@ class PaperBroker:
         self.submitted: list[OrderReceipt] = []
 
     def submit(self, decision: Decision, verdict: GuardVerdict, equity_usd: float) -> OrderReceipt:
-        _require_guard_approval(decision, verdict, broker_is_live=False)
+        _require_guard_approval(decision, verdict, equity_usd, broker_is_live=False)
         receipt = OrderReceipt(
             order_id=f"paper-{uuid.uuid4().hex[:12]}",
             ticker=decision.ticker,
             side=decision.action.value,
-            notional_usd=verdict.approved_size_pct / 100.0 * equity_usd,
+            notional_usd=verdict.approved_notional_usd,
             paper=True,
         )
         self.submitted.append(receipt)
@@ -94,11 +96,11 @@ class AlpacaBroker:
     def submit(  # pragma: no cover - network
         self, decision: Decision, verdict: GuardVerdict, equity_usd: float
     ) -> OrderReceipt:
-        _require_guard_approval(decision, verdict, broker_is_live=not self._paper)
+        _require_guard_approval(decision, verdict, equity_usd, broker_is_live=not self._paper)
         from alpaca.trading.enums import OrderSide, TimeInForce
         from alpaca.trading.requests import MarketOrderRequest
 
-        notional = round(verdict.approved_size_pct / 100.0 * equity_usd, 2)
+        notional = round(verdict.approved_notional_usd, 2)
         order = self._client.submit_order(
             MarketOrderRequest(
                 symbol=decision.ticker,
@@ -112,7 +114,7 @@ class AlpacaBroker:
 
 
 def _require_guard_approval(
-    decision: Decision, verdict: GuardVerdict, *, broker_is_live: bool
+    decision: Decision, verdict: GuardVerdict, equity_usd: float, *, broker_is_live: bool
 ) -> None:
     if verdict.result not in (GuardResult.passed, GuardResult.clipped):
         raise GuardBypassError(f"decision was not approved by guard: {verdict.reasons}")
@@ -130,6 +132,16 @@ def _require_guard_approval(
         raise GuardBypassError(
             "verdict was evaluated in paper context (live=False) but the broker "
             "is live; re-run the guard with live=True"
+        )
+    if equity_usd != verdict.equity_usd:
+        # The confirm threshold is denominated in dollars; the verdict's
+        # equity basis IS the dollar amount the guard authorized. A different
+        # basis at submit time would let a $50-approved order size to
+        # arbitrary dollars — re-run the guard on the fresh snapshot instead.
+        raise GuardBypassError(
+            f"equity basis mismatch: verdict judged against "
+            f"${verdict.equity_usd:.2f}, submission claims ${equity_usd:.2f}; "
+            "re-run the guard with the current portfolio snapshot"
         )
     if verdict.approved_size_pct <= 0:
         raise GuardBypassError("guard approved zero size; nothing to submit")

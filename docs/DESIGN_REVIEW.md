@@ -89,6 +89,20 @@ sell/turnover symmetry, loss-halt asymmetry, boundary rejections), the
 config no-leverage invariant, the schema firewall, and the injection→guard
 fixtures as genuinely sound.
 
+**Round 3 (verification pass):** all round-2 fixes were verified by re-running
+the original exploits against the code; all held. The regression scan found
+one residual (R1, important): the verdict bound *what* trades but not *how
+many dollars* — a verdict judged at $1k equity (so 5% = $50, under the $200
+human-confirm gate) could be submitted against $5M equity, sizing a $250k
+live order the confirm gate never saw. Fixed: the verdict now carries the
+equity snapshot it was judged against, brokers size orders exclusively from
+the verdict's own notional, and a submission claiming a different equity
+basis raises `GuardBypassError` (re-run the guard on the fresh snapshot
+instead). The exploit is now a regression test
+(`test_equity_basis_bound_to_verdict`). The reviewer also confirmed that
+binding `size_pct` is unnecessary — order size never flows from the Decision,
+only from the verdict.
+
 ## Expert sign-off criteria used
 
 - No path from untrusted text to an order without passing typed validation

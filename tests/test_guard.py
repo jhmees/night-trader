@@ -229,10 +229,30 @@ def test_live_context_verdict_required(universe, limits):
     paper_verdict = guard.check(d, flat_portfolio(), universe, limits, live=False)
     assert paper_verdict.result is GuardResult.passed
     with pytest.raises(GuardBypassError, match="paper context"):
-        _require_guard_approval(d, paper_verdict, broker_is_live=True)
+        _require_guard_approval(d, paper_verdict, 10_000.0, broker_is_live=True)
     live_verdict = guard.check(d, flat_portfolio(), universe, limits,
                                live=True, human_confirmed=True)
-    _require_guard_approval(d, live_verdict, broker_is_live=True)  # no raise
+    _require_guard_approval(d, live_verdict, 10_000.0, broker_is_live=True)  # no raise
+
+
+def test_equity_basis_bound_to_verdict(universe, limits):
+    """The confirm threshold is checked in dollars, so the equity basis must
+    be bound too: a verdict judged at small equity (below the confirm gate)
+    must not size a submission against a larger equity (finding R1)."""
+    from nighttrader.execution.broker import _require_guard_approval
+
+    small = flat_portfolio(equity_usd=1_000.0)  # 5% = $50, under the $200 gate
+    d = make_decision(size_pct=5.0)
+    v = guard.check(d, small, universe, limits, live=True, human_confirmed=False)
+    assert v.result is GuardResult.passed  # legitimately under threshold
+
+    with pytest.raises(GuardBypassError, match="equity basis mismatch"):
+        _require_guard_approval(d, v, 5_000_000.0, broker_is_live=True)
+
+    # and the honest path sizes from the verdict's own basis
+    broker = PaperBroker()
+    receipt = broker.submit(d, v, equity_usd=1_000.0)
+    assert receipt.notional_usd == pytest.approx(50.0)
 
 
 # --- purity: guard.py must not import LLM/network machinery ---------------------

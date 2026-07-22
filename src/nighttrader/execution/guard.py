@@ -54,6 +54,14 @@ class GuardVerdict:
     action: Action
     live: bool
     human_confirmed: bool
+    # the equity snapshot the % (and the confirm-threshold check) was judged
+    # against — the broker refuses a different basis, so the dollar amount
+    # the human-confirm gate saw is the dollar amount that trades
+    equity_usd: float
+
+    @property
+    def approved_notional_usd(self) -> float:
+        return self.approved_size_pct / 100.0 * self.equity_usd
 
 
 def check(
@@ -83,6 +91,7 @@ def check(
             action=decision.action,
             live=live,
             human_confirmed=human_confirmed,
+            equity_usd=portfolio.equity_usd,
         )
 
     def _reject(reason: str) -> GuardVerdict:
