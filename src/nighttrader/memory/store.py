@@ -7,6 +7,7 @@ idempotent per run_id. DuckDB queries the whole category via glob.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -15,7 +16,14 @@ import duckdb
 import pandas as pd
 from pydantic import BaseModel
 
+from nighttrader.schemas import SCHEMA_VERSION
+
 DATA_ROOT = Path(__file__).resolve().parents[3] / "data"
+
+# Category names become DuckDB view identifiers and glob paths; anything
+# outside this alphabet is refused on write and skipped on read, so no
+# on-disk name can smuggle SQL into query().
+_CATEGORY_RE = re.compile(r"[A-Za-z0-9_]+")
 
 
 def _partition_dir(root: Path, category: str, day: date) -> Path:
@@ -34,8 +42,17 @@ def write_rows(
     (idempotent re-runs), never other runs' files."""
     root = root or DATA_ROOT
     day = day or datetime.now(UTC).date()
+    if not _CATEGORY_RE.fullmatch(category):
+        raise ValueError(f"invalid category name {category!r} (allowed: [A-Za-z0-9_])")
     if isinstance(rows, pd.DataFrame):
+        if rows.empty:
+            raise ValueError("refusing to write empty row set")
         df = rows.copy()
+        # Every stored row carries the audit stamps, whichever path wrote it.
+        if "schema_version" not in df.columns:
+            df["schema_version"] = SCHEMA_VERSION
+        if "ts" not in df.columns:
+            df["ts"] = datetime.now(UTC).isoformat()
     else:
         if not rows:
             raise ValueError("refusing to write empty row set")
@@ -68,7 +85,9 @@ def query(sql: str, *, root: Path | None = None) -> pd.DataFrame:
     try:
         if root.exists():
             for cat_dir in sorted(p for p in root.iterdir() if p.is_dir()):
-                pattern = str(cat_dir / "date=*" / "*.parquet")
+                if not _CATEGORY_RE.fullmatch(cat_dir.name):
+                    continue  # hostile/garbage dir name — never reaches SQL
+                pattern = str(cat_dir / "date=*" / "*.parquet").replace("'", "''")
                 try:
                     con.execute(
                         f'CREATE VIEW "{cat_dir.name}" AS '

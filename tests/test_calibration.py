@@ -60,3 +60,22 @@ def test_reliability_table_perfect_calibration():
 def test_brier_none_when_nothing_resolved():
     df = _frame([make_pred()])
     assert calibration.brier_score(df) is None
+
+
+def test_reliability_bins_fixed_on_unit_interval():
+    """Bins must be anchored to [0,1], not the observed range, so monthly
+    tables are comparable (finding M2)."""
+    low = [prediction_log.resolve(make_pred(Direction.up, 0.15), -5.0) for _ in range(4)]
+    high = [prediction_log.resolve(make_pred(Direction.up, 0.95), 5.0) for _ in range(4)]
+    tbl = calibration.reliability_table(_frame(low + high), n_bins=5)
+    # 0.15 -> bin 0 of [0,0.2); 0.95 -> bin 4 of [0.8,1.0]
+    assert set(tbl["bin"]) == {0, 4}
+    assert tbl.set_index("bin").loc[0, "hit_rate"] == pytest.approx(0.0)
+    assert tbl.set_index("bin").loc[4, "hit_rate"] == pytest.approx(1.0)
+
+
+def test_report_withholds_subthreshold_numbers():
+    preds = [prediction_log.resolve(make_pred(Direction.up, 0.8), 3.0)]
+    text = calibration.report(_frame(preds))
+    assert "withheld" in text
+    assert "brier score" not in text

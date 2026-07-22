@@ -250,7 +250,7 @@ See `src/nighttrader/schemas.py` — TypedEvent, Scenario, Prediction, Decision,
 
 ### 11.4 The guard contract (RT-5, non-negotiable)
 
-`execution/guard.py` is pure deterministic Python: no LLM imports, no network. It enforces in order: (1) ticker ∈ universe.yaml, (2) size ≤ max position, (3) daily turnover budget, (4) no shorts / no margin / gross-exposure cap, (5) daily-loss circuit breaker halts new buys, (6) live trades above threshold require human `--confirm`. Anything failing is logged with reason and NOT sent. Import purity is enforced by an AST test; the broker layer refuses decisions without a passing verdict, so no code path can skip the guard.
+`execution/guard.py` is pure deterministic Python: no LLM imports, no network. It enforces in order: (1) ticker ∈ universe.yaml, (2) size ≤ max position, (3) daily turnover budget, (4) no shorts / no margin / gross-exposure cap, (5) daily-loss circuit breaker halts new buys, (6) live trades above threshold require human `--confirm`. Anything failing is logged with reason and NOT sent. Import purity is enforced by an AST test (static + dynamic imports). Each verdict is bound to the decision and execution context it judged (decision_id/ticker/action/live/confirmed); the broker rejects any mismatch, a live broker rejects paper-context verdicts, and a live broker cannot be constructed without the two-key rule — so no code path, including verdict reuse, can skip the guard.
 
 ### 11.5 Build phases with gates
 

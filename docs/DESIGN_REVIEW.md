@@ -65,6 +65,30 @@ feed depth, 13F parsing scope, TradingAgents extension-point sufficiency.
 Plus two operator to-dos no code can close: **rotate the FRED key** and
 **verify Alpaca CH onboarding / file W-8BEN** before Phase 4.
 
+## Review loop, round 2 — adversarial findings and fixes
+
+The scaffold above was then attacked by an independent adversarial review
+(AI-systems + quant lens) whose explicit goal was to refute the endorsement
+claim. It succeeded — which is the loop working. Findings, all fixed and
+regression-tested in the same round:
+
+| Sev | Finding | Fix |
+|-----|---------|-----|
+| Critical | **Verdict not bound to decision**: `GuardVerdict` carried no identity, so a verdict earned by a small safe XLF buy could be replayed to submit a 100% off-universe order — defeating the firewall without ever "skipping" the guard. | Verdict now carries `decision_id`/`ticker`/`action` plus the `live`/`human_confirmed` context it was judged under; the broker raises `GuardBypassError` on any mismatch. Tested (verdict reuse, ticker swap, genuine pairing). |
+| Important | **Live gates were conventions, not enforcement**: the two-key rule was a helper the live broker never called, and a paper-context verdict could gate a live order. | `AlpacaBroker(paper=False)` refuses to construct without both keys (checked before any SDK import, so it's testable); live submission requires a verdict evaluated with `live=True`. Tested. |
+| Important | **DuckDB injection** via on-disk category dir names interpolated into `CREATE VIEW`. | Category names validated against `[A-Za-z0-9_]+` on write and skipped on read; path quoting escaped. Tested with a hostile directory planted on disk. |
+| Important | **DataFrame-path rows lacked `schema_version`/`ts`** — the exact rows Phase 0 writes — contradicting claim #9; empty DataFrames wrote silently. | Both stamps injected on the DataFrame path; empty frames refused. Tested. |
+| Important | **Look-ahead test was a tautology** (compared a call to itself). | `compute_features` gained an `as_of` parameter; the test now appends corrupted future bars and asserts the as-of row is unchanged. |
+| Minor | Purity test missed dynamic imports (`__import__`, `importlib`, `eval`). | AST check extended to call nodes. |
+| Minor | Reliability bins fitted to the observed range → monthly tables not comparable. | Bins fixed on [0,1]; tested with mixed confidences. |
+| Minor | `daily_run` minted a fresh run_id per invocation, so same-day re-runs appended duplicates despite the "idempotent" claim. | run_id is now deterministic per UTC day; a re-run overwrites its own file. |
+| Minor | Calibration report printed sub-threshold numbers with a caveat ("labels rather than refuses"). | Below 30 resolved, numbers are withheld entirely. Tested. |
+
+The reviewer confirmed the guard rule arithmetic (sequential clipping,
+sell/turnover symmetry, loss-halt asymmetry, boundary rejections), the
+config no-leverage invariant, the schema firewall, and the injection→guard
+fixtures as genuinely sound.
+
 ## Expert sign-off criteria used
 
 - No path from untrusted text to an order without passing typed validation

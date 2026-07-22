@@ -10,7 +10,7 @@ import pytest
 
 from nighttrader.execution import guard
 from nighttrader.execution.broker import GuardBypassError, PaperBroker
-from nighttrader.execution.guard import GuardVerdict, PortfolioState
+from nighttrader.execution.guard import PortfolioState
 from nighttrader.schemas import Action, Decision, GuardResult
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -179,9 +179,60 @@ def test_injected_decisions_never_pass_unclamped(case, universe, limits):
 def test_broker_refuses_unguarded_decision(universe, limits):
     """No code path may submit an order without a passing verdict."""
     broker = PaperBroker()
-    rejected = GuardVerdict(GuardResult.rejected, 0.0, ["nope"])
+    d = make_decision()
+    rejected = guard.check(make_decision(ticker="EVILCO"), flat_portfolio(), universe, limits)
+    assert rejected.result is GuardResult.rejected
     with pytest.raises(GuardBypassError):
-        broker.submit(make_decision(), rejected, equity_usd=10_000.0)
+        broker.submit(d, rejected, equity_usd=10_000.0)
+
+
+def test_broker_refuses_verdict_for_different_decision(universe, limits):
+    """A verdict earned by a safe decision must never authorize another
+    decision — verdict/decision binding (review finding C1)."""
+    broker = PaperBroker()
+    safe = make_decision(ticker="XLF", size_pct=2.0)
+    verdict_for_safe = guard.check(safe, flat_portfolio(), universe, limits)
+    assert verdict_for_safe.result is GuardResult.passed
+
+    hostile = make_decision(ticker="XLF", size_pct=2.0)  # different decision_id
+    with pytest.raises(GuardBypassError, match="mismatch"):
+        broker.submit(hostile, verdict_for_safe, equity_usd=10_000.0)
+
+    # ticker swap under a reused decision_id also dies
+    swapped = safe.model_copy(update={"ticker": "SPY"})
+    with pytest.raises(GuardBypassError, match="mismatch"):
+        broker.submit(swapped, verdict_for_safe, equity_usd=10_000.0)
+
+    # the genuine pairing still submits fine
+    receipt = broker.submit(safe, verdict_for_safe, equity_usd=10_000.0)
+    assert receipt.notional_usd == pytest.approx(200.0)
+
+
+def test_live_broker_requires_two_keys(monkeypatch):
+    """AlpacaBroker(paper=False) must refuse to construct without BOTH the
+    env var and the CLI flag — checked before any SDK import (finding I1)."""
+    from nighttrader.execution.broker import AlpacaBroker
+
+    monkeypatch.delenv("NIGHTTRADER_LIVE", raising=False)
+    with pytest.raises(GuardBypassError, match="two-key"):
+        AlpacaBroker(paper=False, cli_live_flag=True)
+    monkeypatch.setenv("NIGHTTRADER_LIVE", "1")
+    with pytest.raises(GuardBypassError, match="two-key"):
+        AlpacaBroker(paper=False, cli_live_flag=False)
+
+
+def test_live_context_verdict_required(universe, limits):
+    """A verdict evaluated in paper context cannot gate a live submission."""
+    from nighttrader.execution.broker import _require_guard_approval
+
+    d = make_decision(size_pct=2.0)
+    paper_verdict = guard.check(d, flat_portfolio(), universe, limits, live=False)
+    assert paper_verdict.result is GuardResult.passed
+    with pytest.raises(GuardBypassError, match="paper context"):
+        _require_guard_approval(d, paper_verdict, broker_is_live=True)
+    live_verdict = guard.check(d, flat_portfolio(), universe, limits,
+                               live=True, human_confirmed=True)
+    _require_guard_approval(d, live_verdict, broker_is_live=True)  # no raise
 
 
 # --- purity: guard.py must not import LLM/network machinery ---------------------
@@ -196,13 +247,21 @@ def test_guard_import_purity():
     src = Path(guard.__file__).read_text()
     tree = ast.parse(src)
     seen = set()
+    dynamic = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             seen.update(a.name for a in node.names)
         elif isinstance(node, ast.ImportFrom):
             seen.add(node.module or "")
+        elif isinstance(node, ast.Call):
+            # dynamic-import / code-exec escape hatches count too
+            f = node.func
+            name = f.id if isinstance(f, ast.Name) else (
+                f.attr if isinstance(f, ast.Attribute) else None)
+            if name in {"__import__", "import_module", "eval", "exec", "compile"}:
+                dynamic.append(name)
     illegal = seen - ALLOWED_GUARD_IMPORTS
-    assert not illegal, (
-        f"guard.py imports {illegal} — the guard must stay pure "
-        "(no LLM, no network, design §11.4)"
+    assert not illegal and not dynamic, (
+        f"guard.py imports {illegal or dynamic} — the guard must stay pure "
+        "(no LLM, no network, no dynamic imports; design §11.4)"
     )

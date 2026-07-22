@@ -39,10 +39,21 @@ class PortfolioState:
 
 @dataclass(frozen=True)
 class GuardVerdict:
+    """A verdict is bound to the exact decision and execution context it
+    judged (decision_id/ticker/action/live/human_confirmed). The broker
+    refuses any verdict whose binding doesn't match the order being submitted,
+    so a verdict earned by one (safe) decision can never authorize another."""
+
     result: GuardResult
     # size actually allowed to trade, % of equity (0 when rejected)
     approved_size_pct: float
     reasons: list[str]
+    # binding to the judged decision + context
+    decision_id: str
+    ticker: str
+    action: Action
+    live: bool
+    human_confirmed: bool
 
 
 def check(
@@ -62,8 +73,23 @@ def check(
     """
     reasons: list[str] = []
 
+    def _verdict(result: GuardResult, size_pct: float, why: list[str]) -> GuardVerdict:
+        return GuardVerdict(
+            result=result,
+            approved_size_pct=size_pct,
+            reasons=why,
+            decision_id=decision.decision_id,
+            ticker=decision.ticker,
+            action=decision.action,
+            live=live,
+            human_confirmed=human_confirmed,
+        )
+
+    def _reject(reason: str) -> GuardVerdict:
+        return _verdict(GuardResult.rejected, 0.0, [reason])
+
     if decision.action is Action.hold:
-        return GuardVerdict(GuardResult.passed, 0.0, ["hold: nothing to execute"])
+        return _verdict(GuardResult.passed, 0.0, ["hold: nothing to execute"])
 
     # -- 1. universe whitelist ------------------------------------------------
     if decision.ticker not in universe.all_tickers:
@@ -137,9 +163,5 @@ def check(
             )
 
     if reasons:
-        return GuardVerdict(GuardResult.clipped, round(size, 6), reasons)
-    return GuardVerdict(GuardResult.passed, round(size, 6), ["all checks passed"])
-
-
-def _reject(reason: str) -> GuardVerdict:
-    return GuardVerdict(GuardResult.rejected, 0.0, [reason])
+        return _verdict(GuardResult.clipped, round(size, 6), reasons)
+    return _verdict(GuardResult.passed, round(size, 6), ["all checks passed"])

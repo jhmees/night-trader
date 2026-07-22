@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-import uuid
 from datetime import UTC, datetime
 
 import httpx
@@ -42,7 +41,9 @@ def main() -> int:
         print("live mode is Phase 4 work and not implemented; refusing.", file=sys.stderr)
         return 2
 
-    run_id = f"run-{datetime.now(UTC):%Y%m%dT%H%M%S}-{uuid.uuid4().hex[:6]}"
+    # Deterministic per UTC day: re-running the cron overwrites its own file
+    # instead of appending a duplicate (idempotent re-runs, store contract).
+    run_id = f"run-{datetime.now(UTC):%Y%m%d}"
     universe = load_universe()
     load_limits()  # fail fast on a malformed limits file, even in dry runs
     tickers = universe.tickers_for(1)

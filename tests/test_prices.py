@@ -37,10 +37,21 @@ def test_features_insufficient_history_raises():
 
 
 def test_features_never_lookahead():
-    """Features computed on a truncated series must not change when future
-    bars are appended — the as-of contract."""
+    """Appending future bars — even wildly different ones — must not change
+    the feature row computed as-of an earlier date."""
     df = synthetic_df(n=300)
+    as_of = df.index[249]
     f_truncated = compute_features(df.iloc[:250], "XLF")
-    f_full_asof = compute_features(df.iloc[:250], "XLF")
-    assert f_truncated == f_full_asof
+
+    # same as-of, but the function now SEES 50 future bars
+    f_with_future = compute_features(df, "XLF", as_of=as_of)
+    assert f_with_future == f_truncated
+
+    # corrupt the future violently; the as-of row must be identical
+    df_evil = df.copy()
+    df_evil.loc[df_evil.index[250]:, "close"] = 1e9
+    f_evil_future = compute_features(df_evil, "XLF", as_of=as_of)
+    assert f_evil_future == f_truncated
+
+    # sanity: without as_of, the extra bars do change the row
     assert compute_features(df, "XLF")["as_of"] != f_truncated["as_of"]
