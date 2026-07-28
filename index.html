@@ -38,6 +38,15 @@ h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
 .metric-changes { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .loading { color: #888; font-size: 14px; }
 .last-updated { font-size: 11px; color: #aaa; text-align: right; margin-top: 1rem; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; background: #639922; vertical-align: middle; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }
+.pulse { animation: pulse 2s infinite; }
+.key-input { font-size: 12px; padding: 5px 10px; border-radius: 8px; border: 1px solid #ccc; background: transparent; color: inherit; width: 220px; }
+table.pipe { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.pipe th { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; text-align: right; padding: 4px 8px; font-weight: 500; }
+table.pipe th:first-child, table.pipe td:first-child { text-align: left; }
+table.pipe td { text-align: right; padding: 7px 8px; border-top: 1px solid #f0ede6; }
+@media (prefers-color-scheme: dark) { table.pipe td { border-color: #2e2e2a; } .key-input { border-color: #444; } }
 @media (prefers-color-scheme: dark) {
   body { background: #1a1a18; color: #e8e6df; }
   .card, .summary { background: #242420; border-color: #3a3a36; }
@@ -63,6 +72,9 @@ h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
 
 <div id="summary" class="summary"><div class="loading">Loading signals...</div></div>
 
+<div class="section-label" id="pipeline-label" style="display:none"><span class="dot pulse"></span>Pipeline snapshot</div>
+<div class="card" id="pipeline-section" style="display:none"></div>
+
 <div class="section-label">Faber 10-month moving average signals</div>
 <div class="card">
   <div id="faber-section"><div class="loading">Fetching ETF data...</div></div>
@@ -82,15 +94,21 @@ h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
 <div class="last-updated" id="last-updated"></div>
 
 <script>
-// The FRED key is stored in your browser's localStorage, never in this file
-// (a key committed here is public — if one ever was, rotate it at
-// https://fred.stlouisfed.org/docs/api/api_key.html).
-var FRED_KEY = localStorage.getItem('FRED_KEY') || '';
-if (!FRED_KEY) {
-  FRED_KEY = (prompt('Enter your FRED API key (free at fred.stlouisfed.org; stored only in this browser)') || '').trim();
-  if (FRED_KEY) localStorage.setItem('FRED_KEY', FRED_KEY);
-}
+// Preferred data source: data.json published by the daily pipeline (no keys,
+// no CORS proxies — see scripts/daily_run.py --publish). Live FRED fetch is a
+// fallback: the key lives in localStorage only, entered via the inline field
+// below (prompt() is blocked in sandboxed iframes, e.g. Notion embeds).
+var FRED_KEY = '';
+try { FRED_KEY = localStorage.getItem('FRED_KEY') || ''; } catch (e) {}
 var CORS = 'https://api.allorigins.win/raw?url=';
+
+function saveFredKey() {
+  var v = (document.getElementById('fred-key-input').value || '').trim();
+  if (!v) return;
+  FRED_KEY = v;
+  try { localStorage.setItem('FRED_KEY', v); } catch (e) {}
+  loadAll();
+}
 
 function fredFetch(id) {
   if (!FRED_KEY) return Promise.resolve(null);
@@ -149,21 +167,69 @@ function loadFaber() {
   });
 }
 
-function loadFRED() {
-  return Promise.all([fredFetch('DGS10'), fredFetch('DGS2'), fredFetch('FEDFUNDS'), fredFetch('VIXCLS'), fredFetch('BAMLH0A0HYM2')])
-    .then(function(r) {
-      var t10 = r[0], t2 = r[1], fed = r[2], vix = r[3], hy = r[4];
-      var spread = (t10 && t2) ? (t10.current - t2.current) : null;
-      var sCls = spread === null ? 'gray' : spread < 0 ? 'red' : spread < 0.5 ? 'amber' : 'green';
-      var sLbl = spread === null ? 'n/a' : spread < 0 ? 'inverted &#9888;' : spread < 0.5 ? 'flat &mdash; watch' : 'normal';
-      document.getElementById('rates-card').innerHTML = '<div class="card-title">Interest rates</div><div class="signal-row"><div><div class="signal-name">Yield curve (2s10s)</div><div class="signal-detail">Primary recession predictor</div></div><div style="text-align:right"><span class="badge ' + sCls + '">' + sLbl + '</span><div style="font-size:11px;color:#aaa;margin-top:4px">' + (spread !== null ? spread.toFixed(2) + '%' : '') + '</div></div></div><div class="signal-row"><div><div class="signal-name">10Y Treasury yield</div><div class="signal-detail">Long-rate benchmark</div></div><div style="font-size:18px;font-weight:500">' + (t10 ? t10.current.toFixed(2) + '%' : 'n/a') + '</div></div><div class="signal-row"><div><div class="signal-name">2Y Treasury yield</div><div class="signal-detail">Fed expectations proxy</div></div><div style="font-size:18px;font-weight:500">' + (t2 ? t2.current.toFixed(2) + '%' : 'n/a') + '</div></div><div class="signal-row"><div><div class="signal-name">Fed funds rate</div><div class="signal-detail">Current policy rate</div></div><div style="font-size:18px;font-weight:500">' + (fed ? fed.current.toFixed(2) + '%' : 'n/a') + '</div></div>';
-      var vixCls = !vix ? 'gray' : vix.current > 30 ? 'red' : vix.current > 20 ? 'amber' : 'green';
-      var vixLbl = !vix ? 'n/a' : vix.current > 30 ? 'high fear &#9888;' : vix.current > 20 ? 'elevated' : 'calm';
-      var hyCls = !hy ? 'gray' : hy.current > 5 ? 'red' : hy.current > 3.5 ? 'amber' : 'green';
-      var hyLbl = !hy ? 'n/a' : hy.current > 5 ? 'wide &mdash; risk off' : hy.current > 3.5 ? 'widening' : 'tight &mdash; risk on';
-      document.getElementById('risk-card').innerHTML = '<div class="card-title">Risk indicators</div><div class="signal-row"><div><div class="signal-name">VIX volatility index</div><div class="signal-detail">Market fear gauge</div></div><div style="text-align:right"><span class="badge ' + vixCls + '">' + vixLbl + '</span><div style="font-size:11px;color:#aaa;margin-top:4px">' + (vix ? vix.current.toFixed(1) : '') + '</div></div></div><div class="signal-row"><div><div class="signal-name">HY credit spread</div><div class="signal-detail">Stress in credit markets</div></div><div style="text-align:right"><span class="badge ' + hyCls + '">' + hyLbl + '</span><div style="font-size:11px;color:#aaa;margin-top:4px">' + (hy ? hy.current.toFixed(2) + '%' : '') + '</div></div></div><div class="signal-row"><div style="font-size:13px;color:#888">Ripple rule: VIX &gt;30 = reduce risk. HY spread &gt;5% = move defensive.</div></div>';
-      return { spread: spread, vix: vix ? vix.current : null, hy: hy ? hy.current : null };
+function fmt(v, d, suffix) {
+  return (v === null || v === undefined) ? 'n/a' : v.toFixed(d) + (suffix || '');
+}
+
+function loadPipeline() {
+  return fetch('data.json?_=' + Date.now())
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .catch(function() { return null; })
+    .then(function(d) {
+      if (!d || !d.features || !d.features.length) return null;
+      var rows = d.features.map(function(f) {
+        var r5 = f.ret_5d_pct, cls = r5 === null ? 'gray' : r5 > 0.5 ? 'green' : r5 < -0.5 ? 'red' : 'gray';
+        return '<tr><td><b>' + f.ticker + '</b></td><td>$' + fmt(f.close, 2) +
+          '</td><td><span class="badge ' + cls + '">' + (r5 > 0 ? '+' : '') + fmt(r5, 1, '%') + '</span></td>' +
+          '<td>' + fmt(f.ret_21d_pct, 1, '%') + '</td><td>' + fmt(f.dist_ma50_pct, 1, '%') + '</td>' +
+          '<td>' + fmt(f.dist_ma200_pct, 1, '%') + '</td><td>' + fmt(f.realized_vol_20d_pct, 0, '%') + '</td></tr>';
+      }).join('');
+      var asOf = d.features[0].as_of || (d.generated_at || '').slice(0, 10);
+      document.getElementById('pipeline-section').innerHTML =
+        '<div class="card-title">Bucket-1 features <span style="font-size:11px;color:#aaa;font-weight:400">as of ' + asOf +
+        ' &middot; computed by daily_run.py</span></div>' +
+        '<div style="overflow-x:auto"><table class="pipe"><tr><th>ticker</th><th>close</th><th>5d</th><th>21d</th><th>vs MA50</th><th>vs MA200</th><th>vol 20d</th></tr>' +
+        rows + '</table></div>';
+      document.getElementById('pipeline-label').style.display = '';
+      document.getElementById('pipeline-section').style.display = '';
+      return d;
     });
+}
+
+function renderFredCards(v, sourceNote) {
+  var spread = (v.t10 !== null && v.t10 !== undefined && v.t2 !== null && v.t2 !== undefined) ? (v.t10 - v.t2) : null;
+  var sCls = spread === null ? 'gray' : spread < 0 ? 'red' : spread < 0.5 ? 'amber' : 'green';
+  var sLbl = spread === null ? 'n/a' : spread < 0 ? 'inverted &#9888;' : spread < 0.5 ? 'flat &mdash; watch' : 'normal';
+  document.getElementById('rates-card').innerHTML = '<div class="card-title">Interest rates <span style="font-size:11px;color:#aaa;font-weight:400">' + sourceNote + '</span></div><div class="signal-row"><div><div class="signal-name">Yield curve (2s10s)</div><div class="signal-detail">Primary recession predictor</div></div><div style="text-align:right"><span class="badge ' + sCls + '">' + sLbl + '</span><div style="font-size:11px;color:#aaa;margin-top:4px">' + (spread !== null ? spread.toFixed(2) + '%' : '') + '</div></div></div><div class="signal-row"><div><div class="signal-name">10Y Treasury yield</div><div class="signal-detail">Long-rate benchmark</div></div><div style="font-size:18px;font-weight:500">' + fmt(v.t10, 2, '%') + '</div></div><div class="signal-row"><div><div class="signal-name">2Y Treasury yield</div><div class="signal-detail">Fed expectations proxy</div></div><div style="font-size:18px;font-weight:500">' + fmt(v.t2, 2, '%') + '</div></div><div class="signal-row"><div><div class="signal-name">Fed funds rate</div><div class="signal-detail">Current policy rate</div></div><div style="font-size:18px;font-weight:500">' + fmt(v.fed, 2, '%') + '</div></div>';
+  var vixCls = v.vix === null ? 'gray' : v.vix > 30 ? 'red' : v.vix > 20 ? 'amber' : 'green';
+  var vixLbl = v.vix === null ? 'n/a' : v.vix > 30 ? 'high fear &#9888;' : v.vix > 20 ? 'elevated' : 'calm';
+  var hyCls = v.hy === null ? 'gray' : v.hy > 5 ? 'red' : v.hy > 3.5 ? 'amber' : 'green';
+  var hyLbl = v.hy === null ? 'n/a' : v.hy > 5 ? 'wide &mdash; risk off' : v.hy > 3.5 ? 'widening' : 'tight &mdash; risk on';
+  document.getElementById('risk-card').innerHTML = '<div class="card-title">Risk indicators <span style="font-size:11px;color:#aaa;font-weight:400">' + sourceNote + '</span></div><div class="signal-row"><div><div class="signal-name">VIX volatility index</div><div class="signal-detail">Market fear gauge</div></div><div style="text-align:right"><span class="badge ' + vixCls + '">' + vixLbl + '</span><div style="font-size:11px;color:#aaa;margin-top:4px">' + (v.vix !== null ? v.vix.toFixed(1) : '') + '</div></div></div><div class="signal-row"><div><div class="signal-name">HY credit spread</div><div class="signal-detail">Stress in credit markets</div></div><div style="text-align:right"><span class="badge ' + hyCls + '">' + hyLbl + '</span><div style="font-size:11px;color:#aaa;margin-top:4px">' + (v.hy !== null ? v.hy.toFixed(2) + '%' : '') + '</div></div></div><div class="signal-row"><div style="font-size:13px;color:#888">Ripple rule: VIX &gt;30 = reduce risk. HY spread &gt;5% = move defensive.</div></div>';
+  return { spread: spread, vix: v.vix, hy: v.hy };
+}
+
+function loadFRED(pipe) {
+  if (FRED_KEY) {
+    return Promise.all([fredFetch('DGS10'), fredFetch('DGS2'), fredFetch('FEDFUNDS'), fredFetch('VIXCLS'), fredFetch('BAMLH0A0HYM2')])
+      .then(function(r) {
+        return renderFredCards({
+          t10: r[0] ? r[0].current : null, t2: r[1] ? r[1].current : null,
+          fed: r[2] ? r[2].current : null, vix: r[3] ? r[3].current : null,
+          hy: r[4] ? r[4].current : null
+        }, 'live FRED');
+      });
+  }
+  if (pipe && pipe.macro) {
+    var m = pipe.macro;
+    return Promise.resolve(renderFredCards(
+      { t10: m.DGS10, t2: m.DGS2, fed: m.FEDFUNDS, vix: m.VIXCLS, hy: m.BAMLH0A0HYM2 },
+      'pipeline &middot; ' + (m.as_of || '').slice(0, 10)
+    ));
+  }
+  document.getElementById('rates-card').innerHTML = '<div class="card-title">Interest rates</div><div style="font-size:13px;color:#888;margin-bottom:10px">No pipeline data.json found. Enter a free FRED API key for live data (stored only in this browser):</div><input id="fred-key-input" class="key-input" type="password" placeholder="FRED API key"> <button class="refresh-btn" onclick="saveFredKey()">save</button>';
+  document.getElementById('risk-card').innerHTML = '<div class="card-title">Risk indicators</div><div style="font-size:13px;color:#888">Waiting for a FRED key or published pipeline data&hellip;</div>';
+  return Promise.resolve({ spread: null, vix: null, hy: null });
 }
 
 function loadCrypto() {
@@ -189,16 +255,18 @@ function buildSummary(faberResults, fredData) {
   var valid = faberResults.filter(function(a) { return a.sig; });
   var holds = valid.filter(function(a) { return a.sig.above; }).length;
   var total = valid.length;
-  var riskLvl = fredData.vix > 30 ? 'high' : fredData.vix > 20 ? 'elevated' : 'low';
-  var curveStatus = fredData.spread < 0 ? 'inverted' : fredData.spread < 0.5 ? 'flat' : 'normal';
-  var overall = holds >= 4 ? 'RISK-ON' : holds <= 1 ? 'RISK-OFF' : 'MIXED';
-  var oCls = holds >= 4 ? 'green' : holds <= 1 ? 'red' : 'amber';
+  var riskLvl = fredData.vix === null ? 'n/a' : fredData.vix > 30 ? 'high' : fredData.vix > 20 ? 'elevated' : 'low';
+  var curveStatus = fredData.spread === null ? 'n/a' : fredData.spread < 0 ? 'inverted' : fredData.spread < 0.5 ? 'flat' : 'normal';
+  var overall = total === 0 ? 'NO DATA' : holds >= 4 ? 'RISK-ON' : holds <= 1 ? 'RISK-OFF' : 'MIXED';
+  var oCls = total === 0 ? 'gray' : holds >= 4 ? 'green' : holds <= 1 ? 'red' : 'amber';
   document.getElementById('summary').innerHTML = '<div class="summary-item"><div class="label">Overall signal</div><span class="overall-badge ' + oCls + '">' + overall + '</span></div><div class="summary-item"><div class="label">Assets above 10M MA</div><div class="value">' + holds + ' / ' + total + '</div></div><div class="summary-item"><div class="label">Yield curve</div><div class="value" style="font-size:16px">' + curveStatus + '</div></div><div class="summary-item"><div class="label">Market fear (VIX)</div><div class="value" style="font-size:16px">' + riskLvl + '</div></div><div class="summary-item"><div class="label">Monthly check</div><div class="value" style="font-size:13px;color:#888">last trading day</div></div>';
 }
 
 function loadAll() {
   document.getElementById('summary').innerHTML = '<div class="loading">Refreshing...</div>';
-  Promise.all([loadFaber(), loadFRED(), loadCrypto()]).then(function(results) {
+  loadPipeline().then(function(pipe) {
+    return Promise.all([loadFaber(), loadFRED(pipe), loadCrypto()]);
+  }).then(function(results) {
     var faberResults = results[0];
     var fredData = results[1];
     if (faberResults && fredData) buildSummary(faberResults, fredData);
@@ -207,6 +275,7 @@ function loadAll() {
 }
 
 loadAll();
+setInterval(loadAll, 15 * 60 * 1000);  // auto-refresh while the page (or embed) stays open
 </script>
 </body>
 </html>

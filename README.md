@@ -54,7 +54,13 @@ index.html       legacy macro dashboard (GitHub Pages) — operator view
 
 ## Live dashboard
 
-👉 [Open dashboard](https://jhmees.github.io/night-trader/) — Faber 10-month MA
-signals, FRED macro indicators, crypto ripple monitor. It prompts once for a
-FRED API key ([free here](https://fred.stlouisfed.org/docs/api/api_key.html))
-and stores it only in your browser.
+👉 [Open dashboard](https://jhmees.github.io/night-trader/) — pipeline
+snapshot, Faber 10-month MA signals, FRED macro indicators, crypto ripple
+monitor. Embed-friendly (works inside a Notion `/embed` block).
+
+Preferred data path: the daily cron publishes a static `data.json`
+(`daily_run.py --publish`, then commit+push) which the dashboard renders —
+no browser API keys, no CORS proxies. Without `data.json`, the FRED cards
+fall back to a live fetch using a key you enter inline
+([free here](https://fred.stlouisfed.org/docs/api/api_key.html)), stored
+only in your browser's localStorage.

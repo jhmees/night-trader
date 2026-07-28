@@ -31,6 +31,10 @@ def main() -> int:
     parser.add_argument("--dry", action="store_true", help="no orders, features only")
     parser.add_argument("--no-fred", action="store_true", help="skip FRED macro snapshot")
     parser.add_argument(
+        "--publish", action="store_true",
+        help="write data.json for the GitHub Pages dashboard after the run",
+    )
+    parser.add_argument(
         "--live", action="store_true",
         help="request live mode (also requires NIGHTTRADER_LIVE=1; Phase 4)",
     )
@@ -78,6 +82,13 @@ def main() -> int:
 
         path = store.write_rows(pd.DataFrame([macro]), "macro", run_id)
         print(f"[{run_id}] wrote macro snapshot -> {path}")
+
+    if args.publish:
+        from nighttrader.dashboard import write_dashboard_json
+
+        out = write_dashboard_json()
+        print(f"[{run_id}] published dashboard payload -> {out}")
+        print(f"[{run_id}] (commit + push data.json so GitHub Pages picks it up)")
 
     if failures:
         print(f"[{run_id}] FAILURES: {', '.join(failures)}", file=sys.stderr)
