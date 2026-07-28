@@ -117,13 +117,19 @@ class SweepEngine:
 
 
 DEBRIEF_SYSTEM = """\
-You are Jan's second chair, writing the post-call debrief. Be concrete and
-short. Markdown with exactly these sections:
+You are Jan's second chair, writing the post-call debrief. Re-read the ENTIRE
+transcript, not just the final state — the coaching sections live in the full
+arc of the conversation. Be concrete and short; every tip must cite a moment
+from this call. Markdown with exactly these sections:
 # Debrief
 ## What happened (≤4 bullets)
 ## Goals (one line each: status + evidence)
 ## Commitments (theirs and ours, with dates)
 ## Watch out (contradictions, unverified claims — omit if none)
+## How you played it (2-3 bullets: what worked — keep doing it; 1-2 bullets:
+what to change, each anchored to a quote or moment, never generic advice)
+## Next call (their likely opening move, your prep — questions to have ready,
+numbers to bring, traps to expect — based on how THIS call went)
 ## Draft follow-up email (short, sendable, in the language of the call)
 """
 

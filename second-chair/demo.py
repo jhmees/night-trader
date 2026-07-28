@@ -138,6 +138,16 @@ DEMO_DEBRIEF = """\
 ## Watch out
 - Brenntag €2.15 fixed/24 mo remains unverified until the written offer arrives.
 - Volume contradiction (200 → 150 t): price year one on 150 t.
+## How you played it
+- **Keep:** "Wenn der Preis wirklich der einzige Punkt ist…" — the direct challenge cracked the price framing and surfaced the stock-outs.
+- **Keep:** You asked for the Brenntag offer in writing instead of countering an unseen number.
+- **Change:** You answered the €2.40 anchor by justifying it (REACH, CoA) before knowing their volume — next time ask the qualifying question first, justify second.
+- **Change:** The 200→150 t revision passed without comment; name contradictions in the room, gently, while they're fresh.
+## Next call
+- Their likely opening: the written Brenntag offer — real, expired, or hedged with conditions. Read the term-length and volume clauses before reacting.
+- Have ready: cost-of-downtime math (4 days standstill × their line rate) to price the buffer-stock option in their numbers, not yours.
+- Bring: proposal at 150 t with a stated path to the 200 t price — makes the volume cut **their** cost, not your concession.
+- Trap to expect: "split the difference" between 2.15 and 2.40 — your floor is €2.30 delivered; trade term or buffer, not cents.
 ## Draft follow-up email
 Subject: Proposal — supply agreement incl. buffer stock
 
