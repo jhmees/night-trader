@@ -34,5 +34,10 @@ brief:
   buffer_sec: 300       # rolling buffer retention
   deal_context: deal_context.md   # static context file, edited per call/client
 
+server:
+  port: 8710
+  sweep_interval_sec: 30        # live: LLM sweep cadence
+  demo_sweep_interval_sec: 6    # demo: keep the scripted call snappy
+
 paths:
   sessions_dir: sessions

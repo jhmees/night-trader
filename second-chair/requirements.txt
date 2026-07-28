@@ -4,4 +4,6 @@ pyyaml>=6.0
 sounddevice>=0.5
 numpy>=1.26
 pynput>=1.7
+fastapi>=0.110
+uvicorn>=0.29
 # Mac only, installed separately (see README): mlx-whisper
