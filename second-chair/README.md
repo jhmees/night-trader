@@ -63,6 +63,17 @@ Silicon it is CPU-only. That's why the transcriber is backend-switchable:
 `mlx` (GPU, Mac) vs `faster-whisper` (CPU, works everywhere — used for
 dev/Gate 0 on Linux too).
 
+## Run — as a Mac app
+
+```bash
+bash build_app.sh              # once, on the Mac → dist/Second Chair.app
+```
+
+Drag `dist/Second Chair.app` to /Applications and double-click it like any
+other app. Working files (sessions/, deal_context.md) live in `~/SecondChair`;
+put `ANTHROPIC_API_KEY=sk-...` in `~/SecondChair/.env` for live sweeps.
+Permission prompts (microphone) will name Second Chair, not your terminal.
+
 ## Run — console UI (the full experience)
 
 ```bash
